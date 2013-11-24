@@ -24,7 +24,6 @@
 #define NUM_HEADER_ELEMENTS 10
 
 
-#define PACKET_SIZE 1024 //files will be broken up into 1KB packets
 
 typedef struct {
 // //connection pointers
@@ -47,11 +46,8 @@ typedef struct {
 	char * message;
 } http_w;
 
-typedef struct {
-	char ** packets;
-} file_packet; 
 
-char** fileToPackets(char * file_s);
+
 
 http_w * responseInit();
 

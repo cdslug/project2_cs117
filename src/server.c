@@ -22,6 +22,7 @@
 #include <string.h>
 #include <assert.h>
 #include <time.h>
+#include "tcp118.h"
 #include "parse.h"
 #include "response.h"
 
@@ -38,6 +39,7 @@ void error(char *msg)
 
 int main(int argc, char *argv[])
 {
+     /*
      int sockfd, portno; //sockfd:portno -> server socket
      socklen_t clilen;
      struct sockaddr_in serv_addr, cli_addr;
@@ -61,17 +63,11 @@ int main(int argc, char *argv[])
 
      listen(sockfd,10);	//5 simultaneous connection at most
 
-     /*//accept connections
-     newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-
-     if (newsockfd < 0)
-       error("ERROR on accept");*/
-
 
      fd_set active_fd_set, read_fd_set; //set for holding sockets
      int newsockfd; //socket representing client
 
-     /* Initialize the set of active sockets */
+     // Initialize the set of active sockets
      FD_ZERO(&active_fd_set);
      FD_SET(sockfd, &active_fd_set); //put sock to the set to monitor new connections
 
@@ -99,7 +95,14 @@ int main(int argc, char *argv[])
     	 }
      }
      close(sockfd);
+     
+     */
+     char test1[2] = {0, 1};
+     uint16_t cs = 0;
+     cs = checksum(test1, 2);
+     printf("given:%x, checksum:%x\n",test1[1],cs);
      return 0;
+
 }
 
 int read_socket(int filedes) {
@@ -116,6 +119,7 @@ int read_socket(int filedes) {
 		return -1;
 	}
 	else {
+        /*
 		//parse message here
 		http_r* request;
         http_w* response;
@@ -131,6 +135,41 @@ int read_socket(int filedes) {
         // freeRequest(request);
 		if (nwrite < 0) error("ERROR writing to socket");
 		return 0;
+        */
+        int i = 0;
+        char *file_s = "0123456789112345678921234567893123456789";
+        int file_len = strlen(file_s);
+        char ** packets = strToPackets(file_s);
+        char packet_buffer[PACKET_SIZE+1];
+        memset(packet_buffer,'\0', sizeof(char)*(PACKET_SIZE+1));
+
+        printf("filelen=%02d\n", file_len);
+        if(strncmp(buffer, "!c", 2) == 0){
+           nwrite = write(filedes, "!s", 2);
+            if (nwrite < 0) {
+                error("ERROR writing to socket_1");
+                return -1;
+            } 
+            for(i = 0; packets[i] != 0; i++){
+                //print the file size and starting byte# of packetl
+                sprintf(packet_buffer, "%02d%02d%s",file_len%100, (i*MAX_BODY_SIZE)%100, packets[i]);
+                printf("packet len =%d...%s...\n",strlen(packet_buffer), packet_buffer);
+                nwrite = write(filedes, packet_buffer, PACKET_SIZE);
+                printf("after write");
+                if (nwrite < 0) {
+                error("ERROR writing to socket_1");
+                return -1;
+                }
+
+                nread = read(filedes, buffer, 1024);
+                while(strncmp(buffer, "#c", 2) != 0){
+                    printf("waiting for ACK\n");
+                }
+            }
+            nwrite = write(filedes, "$s", 2);
+        }
+        
+        return 0;
 	}
 }
 

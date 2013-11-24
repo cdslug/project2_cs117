@@ -1,32 +1,6 @@
 #include "response.h"
 
-char** fileToPackets(char * file_s)
-{
-	int fileSize = 0;
-	int numPackets = 0;
-	int i = 0;
-	char **packetArray = NULL;
 
-	if(file_s == NULL){
-		return NULL; //maybe I should return an allocated char**
-	}
-
-	fileSize = strlen(file_s);
-	numPackets = (fileSize+(PACKET_SIZE-1))/PACKET_SIZE; //rounds up
-
-	//allocate space
-	packetArray = (char**)malloc(sizeof(char*) * (numPackets+1));
-	for(i = 0; i < numPackets+1; i++){
-		packetArray = (char*)malloc(sizeof(char) * (PACKET_SIZE+1));
-	}
-
-	//divide up the file string
-	for(i = 0; i < numPackets; i++){
-		strncpy(packetArray[i], &(file_s[i*PACKET_SIZE], PACKET_SIZE);
-	}
-
-	return packetArray;
-}
 
 http_w * responseInit()
 {

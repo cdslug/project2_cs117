@@ -20,7 +20,7 @@ void error(char *msg)
 int main(int argc, char *argv[])
 {
     int sockfd; //Socket descriptor
-    int portno, n;
+    int portno, n,nread, nwrite, received_bytes;
     struct sockaddr_in serv_addr;
     struct hostent *server; //contains tons of information, including the server's IP address
 
@@ -49,20 +49,47 @@ int main(int argc, char *argv[])
     if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0) //establish a connection to the server
         error("ERROR connecting");
     
-    printf("Please enter the message: ");
+    // printf("Please enter the message: ");
     memset(buffer,0, 256);
-    fgets(buffer,255,stdin);	//read message
+    // fgets(buffer,255,stdin);	//read message
     
-    n = write(sockfd,buffer,strlen(buffer)); //write to the socket
-    if (n < 0) 
+    n = write(sockfd,"!c",2); //write to the socket
+    if (n < 0) {
          error("ERROR writing to socket");
-    
+    }
+
     memset(buffer,0,256);
-    n = read(sockfd,buffer,255); //read from the socket
+    n = read(sockfd,buffer,2); //read from the socket
     if (n < 0) 
          error("ERROR reading from socket");
     printf("%s\n",buffer);	//print server's response
     
+
+    if(strncmp(buffer, "!s", 2) == 0){
+
+        do{
+            //the server starts sending data after the 2nd handshake step
+            memset(buffer,0,256);
+            nread = read(sockfd,buffer,255); //read from the socket
+            if (nread < 0) {
+                 error("ERROR reading from socket");
+            }
+            printf("%s\n",buffer);  //print server's response
+            
+            //send ack
+            nwrite = write(sockfd,"#c",2); //write to the socket
+            if (nwrite < 0) {
+                error("ERROR writing to socket");
+            }
+            printf("sending ACK\n");
+            //end of transmission
+            if(strncmp(buffer, "$s", 2) == 0){
+                break;
+            }
+        }
+        while(nread > 0);
+    }
+
     close(sockfd); //close socket
     
     return 0;
