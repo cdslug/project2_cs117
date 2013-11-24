@@ -24,35 +24,61 @@ uint16_t checksum(const uint8_t * addr, uint32_t count)
 	return checksum;
 }
 
-uint32_t getSeqNum(const packet_t * pkt)
+uint32_t getSeqNum(const char * pkt)
 {
+return 0;
 }
-void setSeqNum(packet_t * pkt, uint32_t)
+void setSeqNum(char * pkt, uint32_t SeqNum)
 {
+	int i = 0;
+	for( i = 0; i < sizeof(SeqNum); i++){
+		pkt[SEQ_NUM_OFFSET+i] = (SeqNum >> (8*(sizeof(SeqNum)-i-1)))&(0xF);
+	}
 }
-uint32_t getACKNum(const packet_t * pkt)
+uint32_t getACKNum(const char * pkt)
 {
+	return 0;
 }
-void setACKNum(packet_t * pkt, uint32_t)
+void setACKNum(char * pkt, uint32_t ACKNum)
 {
+	int i = 0;
+	for( i = 0; i < sizeof(ACKNum); i++){
+		pkt[ACK_NUM_OFFSET+i] = (ACKNum >> (8*(sizeof(ACKNum)-i-1)))&(0xF);
+	}
 }
-uint8_t getACK(const packet_t * pkt)
+uint16_t getACK(const char * pkt)
 {
+	return 0;
 }
-void setACK(packet_t * pkt, uint8_t)
+void setACK(char * pkt, uint16_t ACK)
 {
+	int offset = ACK_OFFSET;
+	pkt[offset/8] = pkt[offset/8]&((ACK == 1) << (8*sizeof(ACK)-offset%(8*sizeof(ACK))));
 }
-uint8_t getLast(const packet_t * pkt)
+uint16_t getLast(const char * pkt)
 {
+	return 0;
 }
-void setLast(packet_t * pkt, uint8_t)
+void setLast(char * pkt, uint16_t last)
 {
+	int offset = LAST_OFFSET;
+	pkt[offset/8] = pkt[offset/8]&((last == 1) << (8*sizeof(last)-offset%(8*sizeof(last))));
 }
-char * getData(const packet_t * pkt)
+char * getData(const char * pkt)
 {
+	return 0;
 }
-void setData(packet_t * pkt, char * buff, size_t count)
+int setData(char * pkt, char * buff, size_t count)
 {
+	int i = 0; 
+	//maybe check to make sure pkt and buff != null;
+	if(pkt == NULL || buff == NULL) return -1;
+
+	for(i = 0; i < count && i < MAX_BODY_SIZE; i++)
+	{
+		pkt[BODY_OFFSET+i] = buff[i];
+	}
+	return count > MAX_BODY_SIZE ? MAX_BODY_SIZE : count;
 }
 
 packet_t * generatePacket(uint32_t seq_num, 
@@ -60,13 +86,15 @@ packet_t * generatePacket(uint32_t seq_num,
 					   uint8_t ack, 
 					   uint8_t last,
 					   const char * buff,
-					   size_t count);
+					   size_t count)
 {
 	packet_t * pkt = malloc(sizeof(packet_t));
-
+	memset(pkt, 0, sizeof(packet_t));
+	//finish
+	return pkt;
 }
 
-char** strToPackets(char * file_s)
+char** strToPackets(const char * file_s)
 {
 	int fileSize = 0;
 	int numPackets = 0;
@@ -103,7 +131,7 @@ char** strToPackets(char * file_s)
 // OUTPUT: 
 // RETURNS: number of bytes written
 // ABOUT: the main function for 
-char** writeTCP(int * file_p, const char * buf, size_t nbytes)
+int writeTCP(int * file_p, const char * buf, size_t nbytes)
 {
-
+	return 0;
 }

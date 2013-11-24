@@ -25,6 +25,7 @@
 #define LAST_OFFSET		65
 #define SIZE_OFFSET		70
 #define CHECKSUM_OFFSET	80
+#define BODY_OFFSET     96
 
 typedef struct {
 	uint32_t seq_num;
@@ -45,16 +46,16 @@ typedef struct {
 
 uint16_t checksum(const uint8_t * addr, uint32_t count);
 
-uint32_t getSeqNum(const packet_t * pkt);
-void setSeqNum(packet_t * pkt, uint32_t);
-uint32_t getACKNum(const packet_t * pkt);
-void setACKNum(packet_t * pkt, uint32_t);
-uint8_t getACK(const packet_t * pkt);
-void setACK(packet_t * pkt, uint8_t);
-uint8_t getLast(const packet_t * pkt);
-void setLast(packet_t * pkt, uint8_t);
-char * getData(const packet_t * pkt);
-void setData(packet_t * pkt, char * buff, size_t count);
+uint32_t getSeqNum(const char * pkt);
+void setSeqNum(char * pkt, uint32_t seqNum);
+uint32_t getACKNum(const char * pkt);
+void setACKNum(char * pkt, uint32_t ACKNum);
+uint16_t getACK(const char * pkt);
+void setACK(char * pkt, uint16_t ACK);
+uint16_t getLast(const char * pkt);
+void setLast(char * pkt, uint16_t last);
+char * getData(const char * pkt);
+int setData(char * pkt, char * buff, size_t count);
 
 packet_t * generatePacket(uint32_t seq_num, 
 					   uint32_t ack_num, 
@@ -63,6 +64,6 @@ packet_t * generatePacket(uint32_t seq_num,
 					   const char * buff,
 					   size_t count);
 
-writeTCP(int * file_p, const char * buf, size_t nbytes);
-char** strToPackets(char * file_s);
+int writeTCP(int * file_p, const char * buf, size_t nbytes);
+char** strToPackets(const char * file_s);
 #endif //TCP118_H
