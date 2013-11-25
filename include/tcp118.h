@@ -12,6 +12,7 @@
 #include <string.h>
 #include <assert.h>
 #include <time.h>
+#include <stdbool.h>
 
 #define PACKET_SIZE 1024
 #define HEADER_SIZE 12
@@ -27,13 +28,13 @@
 #define CHECKSUM_OFFSET	80
 #define BODY_OFFSET     96
 
-typedef struct {
-	uint32_t seq_num;
-	uint32_t ack_num;
-	uint16_t bits_and_size;
-	uint16_t checksum;
-	char *	 str;
-} packet_t;
+// typedef struct {
+// 	uint32_t seq_num;
+// 	uint32_t ack_num;
+// 	uint16_t bits_and_size;
+// 	uint16_t checksum;
+// 	char *	 str;
+// } packet_t;
 
 typedef struct {
 	uint32_t c_wnd;
@@ -41,7 +42,7 @@ typedef struct {
 	uint32_t next_seq;
 	uint32_t next_mss;
 	uint8_t *acks;
-	packet_t * packets;
+	char * packets;
 } cwnd_t;
 
 uint16_t checksum(const uint8_t * addr, uint32_t count);
@@ -50,19 +51,24 @@ uint32_t getSeqNum(const char * pkt);
 void setSeqNum(char * pkt, uint32_t seqNum);
 uint32_t getACKNum(const char * pkt);
 void setACKNum(char * pkt, uint32_t ACKNum);
-uint16_t getACK(const char * pkt);
-void setACK(char * pkt, uint16_t ACK);
-uint16_t getLast(const char * pkt);
-void setLast(char * pkt, uint16_t last);
-char * getData(const char * pkt);
-int setData(char * pkt, char * buff, size_t count);
+bool getACK(const char * pkt);
+void setACK(char * pkt, bool ACK);
+bool getLast(const char * pkt);
+void setLast(char * pkt, bool last);
+uint16_t getSize(const char * pkt);
+int setSize(char * pkt, uint16_t size);
+uint16_t getChecksum(const char *pkt);
+void setChecksum(char * pkt, uint16_t checksum);
+char * getBody(const char * pkt);
+int setBody(char * pkt, char * buff, size_t count);
 
-packet_t * generatePacket(uint32_t seq_num, 
+char * generatePacket(uint32_t seq_num, 
 					   uint32_t ack_num, 
-					   uint8_t ack, 
-					   uint8_t last,
-					   const char * buff,
+					   bool ack, 
+					   bool last,
+					   char * buff,
 					   size_t count);
+void printPacket(char * pkt);
 
 int writeTCP(int * file_p, const char * buf, size_t nbytes);
 char** strToPackets(const char * file_s);

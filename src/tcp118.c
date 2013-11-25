@@ -5,93 +5,208 @@ uint16_t checksum(const uint8_t * addr, uint32_t count)
 	int i = 0;
 	uint32_t sum = 0, checksum = 0;
 
-	while(count > 1) {
-		sum = sum + (uint16_t) *addr + 1;
-		count -= 2;
+	while(i < (count - 1)) {
+		sum += ((uint16_t *) addr)[i/2];
+		sum = (sum & 0xFFFF) + (sum >> 16); //just to avoid any possible overflow
+		i+=2;
+		// if(i < 4) printf("checksum1:i=%d, sum=%x, checksum=%x\n",i, sum, checksum);
 	}
 
-	if(count > 0)
+	if(i < count)
 	{
 		sum += *((uint8_t *) addr);
+		// printf("checksum2: sum=%x, checksum=%x\n", sum, checksum);
 	}
 
 	while (sum >> 16)
 	{
 		sum = (sum & 0xFFFF) + (sum >> 16);
+		// printf("checksum3: sum=%x, checksum=%x\n", sum, checksum);
 	}
 
 	checksum = ~sum;
+	printf("checksum4: sum=%x, checksum=%x\n", sum, checksum);
 	return checksum;
 }
 
 uint32_t getSeqNum(const char * pkt)
 {
-return 0;
+	return ((uint32_t *)pkt)[SEQ_NUM_OFFSET>>5];
 }
-void setSeqNum(char * pkt, uint32_t SeqNum)
+
+void setSeqNum(char * pkt, uint32_t seqNum)
 {
-	int i = 0;
-	for( i = 0; i < sizeof(SeqNum); i++){
-		pkt[SEQ_NUM_OFFSET+i] = (SeqNum >> (8*(sizeof(SeqNum)-i-1)))&(0xF);
-	}
+	((uint32_t *)pkt)[SEQ_NUM_OFFSET>>5] = seqNum;
+	//SEGFAULT when trying to use pkt in here
 }
+
 uint32_t getACKNum(const char * pkt)
 {
-	return 0;
+	return ((uint32_t *)pkt)[ACK_NUM_OFFSET>>5];
 }
+
 void setACKNum(char * pkt, uint32_t ACKNum)
 {
-	int i = 0;
-	for( i = 0; i < sizeof(ACKNum); i++){
-		pkt[ACK_NUM_OFFSET+i] = (ACKNum >> (8*(sizeof(ACKNum)-i-1)))&(0xF);
+	int index = ACK_NUM_OFFSET>>5;
+	((uint32_t *)pkt)[index] = ACKNum;
+	printf("setACKNum: index=%d\n",index);
+}
+
+bool getACK(const char * pkt)
+{
+	uint32_t temp = ((uint32_t *)pkt)[ACK_OFFSET>>5];
+	printf("getACK: temp=%x\n",temp);
+	temp = temp >> 31;
+	temp = temp & 0x1;
+	return temp;
+}
+
+void setACK(char * pkt, bool ACK)
+{
+	// int offset = ACK_OFFSET;
+	uint32_t temp = ACK;
+
+	temp = temp << 31;
+	// printf("setACK: temp=%08x",temp);
+	((uint32_t *)pkt)[ACK_OFFSET>>5] = (((uint32_t *)pkt)[ACK_OFFSET>>5]&0x7FFFFFFF) | temp;
+
+	printf("setACK: ack=%x\n",((uint32_t *)pkt)[ACK_OFFSET>>5] );
+}	
+
+
+bool getLast(const char * pkt)
+{
+	uint32_t temp = ((uint32_t *)pkt)[LAST_OFFSET>>5];
+	printf("getLast: temp=%x\n",temp);
+	temp = temp >> 30;
+	temp = temp & 0x1;
+	return temp;
+}
+
+void setLast(char * pkt, bool last)
+{
+		// int offset = ACK_OFFSET;
+	uint32_t temp = last;
+
+	temp = temp << 30;
+
+	((uint32_t *)pkt)[LAST_OFFSET>>5] = (((uint32_t *)pkt)[LAST_OFFSET>>5]&0xBFFFFFFF) | temp;
+
+	printf("setLast: last=%x\n",((uint32_t *)pkt)[LAST_OFFSET>>5] );
+}
+
+uint16_t getSize(const char * pkt)
+{
+	uint32_t temp = ((uint32_t *)pkt)[SIZE_OFFSET>>5];
+	printf("getSize: temp=%x\n",temp);
+	temp = temp >> 16;
+	temp = temp & 0x2FF;
+	return (uint16_t)temp;
+}
+
+int setSize(char * pkt, uint16_t size)
+{
+		// int offset = ACK_OFFSET;
+	uint32_t temp = size;
+	int ret = size;
+	if(size > MAX_BODY_SIZE){
+		temp = MAX_BODY_SIZE;
+		ret = MAX_BODY_SIZE;
 	}
+
+	temp = temp << 16;
+
+	((uint32_t *)pkt)[SIZE_OFFSET>>5] = (((uint32_t *)pkt)[SIZE_OFFSET>>5]&0xFC00FFFF) | temp;
+
+	printf("setSize: size=%x\n",((uint32_t *)pkt)[SIZE_OFFSET>>5] );
 }
-uint16_t getACK(const char * pkt)
+
+uint16_t getChecksum(const char *pkt)
 {
-	return 0;
+	uint32_t temp = ((uint32_t *)pkt)[CHECKSUM_OFFSET>>5];
+	printf("getChecksum: temp=%x\n",temp);
+	temp = temp & 0xFFFF;
+	return (uint16_t)temp;
 }
-void setACK(char * pkt, uint16_t ACK)
+
+void setChecksum(char * pkt, uint16_t checksum)
 {
-	int offset = ACK_OFFSET;
-	pkt[offset/8] = pkt[offset/8]&((ACK == 1) << (8*sizeof(ACK)-offset%(8*sizeof(ACK))));
+	uint32_t temp = checksum & 0x0000FFFF;
+	((uint32_t *)pkt)[CHECKSUM_OFFSET>>5] = (((uint32_t *)pkt)[CHECKSUM_OFFSET>>5]&0xFFFF0000) | temp;
+
 }
-uint16_t getLast(const char * pkt)
+
+char * getBody(const char * pkt)
 {
-	return 0;
+	//strdup?
+	return strdup(&(pkt[BODY_OFFSET>>3]));
 }
-void setLast(char * pkt, uint16_t last)
+
+int setBody(char * pkt, char * buff, size_t count)
 {
-	int offset = LAST_OFFSET;
-	pkt[offset/8] = pkt[offset/8]&((last == 1) << (8*sizeof(last)-offset%(8*sizeof(last))));
-}
-char * getData(const char * pkt)
-{
-	return 0;
-}
-int setData(char * pkt, char * buff, size_t count)
-{
+
 	int i = 0; 
-	//maybe check to make sure pkt and buff != null;
+	int copied = count;
 	if(pkt == NULL || buff == NULL) return -1;
-
-	for(i = 0; i < count && i < MAX_BODY_SIZE; i++)
-	{
-		pkt[BODY_OFFSET+i] = buff[i];
+	if(getSize(pkt) != copied){
+		printf("setData: remember packet size parameter and data byte count must ==\n");
 	}
-	return count > MAX_BODY_SIZE ? MAX_BODY_SIZE : count;
+	if(copied > MAX_BODY_SIZE) {
+		copied = MAX_BODY_SIZE;
+	}
+	//maybe check to make sure pkt and buff != null;
+	memcpy(&(pkt[BODY_OFFSET>>3]), buff, copied);
+	return copied;
 }
 
-packet_t * generatePacket(uint32_t seq_num, 
+char * generatePacket(uint32_t seq_num, 
 					   uint32_t ack_num, 
-					   uint8_t ack, 
-					   uint8_t last,
-					   const char * buff,
+					   bool ack, 
+					   bool last,
+					   char * buff,
 					   size_t count)
 {
-	packet_t * pkt = malloc(sizeof(packet_t));
-	memset(pkt, 0, sizeof(packet_t));
+	char * pkt = malloc(PACKET_SIZE);
+	uint16_t cs = 0;
+	memset(pkt, 0, PACKET_SIZE);
+
+	setSeqNum(pkt, seq_num);
+	setACKNum(pkt, ack_num);
+	setACK(pkt, ack);
+	setLast(pkt, last);
+	setSize(pkt, count);
+	setBody(pkt, buff, count);
+	cs = checksum(pkt, PACKET_SIZE);
+	setChecksum(pkt, cs);
+
 	//finish
 	return pkt;
+}
+
+void printPacket(char * pkt)
+{
+	if(pkt == NULL){
+		//bad things
+		printf("printPacket: was not given a valid string\n");
+	}
+	else{
+		char * body = getBody(pkt);
+		uint16_t cs_msg = getChecksum(pkt);
+		uint16_t cs_valid = checksum(pkt,PACKET_SIZE);
+
+		printf("printPacket:\n");
+		printf("\tseq_num=%x\n", getSeqNum(pkt));
+		printf("\tack_num=%x\n", getACKNum(pkt));
+		printf("\tack=%d\n", getACK(pkt));
+		printf("\tlast=%d\n",getLast(pkt));
+		printf("\tsize=%d\n",getSize(pkt));
+		printf("\tchecksum:\n");
+		printf("\t\tcs_msg=%x\n",cs_msg);
+		printf("\t\tcs_valid==0?=%x\n", cs_valid);
+		printf("\tbody=\n\t:%s\n",body);
+		printf("printPacket: END\n");
+		free(body);
+	}
 }
 
 char** strToPackets(const char * file_s)

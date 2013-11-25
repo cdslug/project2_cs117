@@ -97,12 +97,101 @@ int main(int argc, char *argv[])
      close(sockfd);
      
      */
-     char test1[2] = {0, 1};
-     uint16_t cs = 0;
-     cs = checksum(test1, 2);
-     printf("given:%x, checksum:%x\n",test1[1],cs);
-     return 0;
+     
+     /*
+     uint32_t test1[1] = {0x00000001};
+     uint16_t cs1 = 0;
+     cs1 = checksum((uint8_t *)test1, sizeof(uint32_t)*1);
+     printf("given:%x, checksum:%x\n",test1[0],cs1);
+    
 
+     int i = 0;
+
+     uint32_t seqNum = 0;
+     uint32_t ACKNum = 0;
+     bool ACK = 0;
+     bool last = 0;
+     uint16_t size = 0;
+     uint16_t cs = 0;
+     char data[MAX_BODY_SIZE];
+     char * data_r;
+     char *packetTest = malloc(sizeof(char)*PACKET_SIZE);
+     memset(packetTest, 0, sizeof(char)*PACKET_SIZE);
+    
+     seqNum = 0x12345678;
+     setSeqNum(packetTest, seqNum);
+     seqNum = getSeqNum(packetTest);
+     printf("seqNumTest set?=%x\n", seqNum);
+     
+     ACKNum =0x9ABCDEF0;
+     setACKNum(packetTest, ACKNum);
+     ACKNum = getACKNum(packetTest);
+     printf("ACKNumTest set?=%x\n", ACKNum);
+
+     ACK = true;
+     setACK(packetTest, ACK);
+     ACK = getACK(packetTest);
+     printf("ack set?=%x\n",ACK);
+
+     ACK = false;
+     setACK(packetTest, ACK);
+     ACK = getACK(packetTest);
+     printf("ack set?=%x\n",ACK);
+     
+
+     last = true;
+     setLast(packetTest, last);
+     last = getLast(packetTest);
+     printf("last set?=%x\n", last);
+
+     last = false;
+     setLast(packetTest, last);
+     last = getLast(packetTest);
+     printf("last set?=%x\n", last);
+     
+     setACK(packetTest, true);
+     setLast(packetTest, true);
+
+     size = 990;
+     setSize(packetTest, size);
+     size = getSize(packetTest);
+     printf("size set?=%x\n",size);
+
+     cs = checksum(packetTest, PACKET_SIZE);
+     setChecksum(packetTest, cs);
+     cs = getChecksum(packetTest);
+     printf("checksum set?=%x\n", cs);
+
+     //check that the sum is 1111
+     cs = checksum(packetTest, PACKET_SIZE);
+     printf("checksum zero?=%x\n", cs);
+
+     strcpy(data, "Who wants to eat marshmellows?!");
+     setData(packetTest, data, strlen(data));
+     data_r = getData(packetTest);
+     printf("data set?=\n%s\n",data_r);
+     free(data_r);
+*/
+     int i = 0;
+     char data[MAX_BODY_SIZE];
+     char * data_r;
+     strcpy(data, "Who wants to eat marshmellows?!");
+     char * packetTest = generatePacket(0x12345678,
+                                        0x9ABCDEF0,
+                                        false,
+                                        false,
+                                        data,
+                                        strlen(data));
+     printPacket(packetTest);
+
+     printf("test pkt bits\n");
+     for(i = 0; i < PACKET_SIZE/32; i+=8)
+     {
+              printf("testbits, %08x %08x %08x %08x ",((uint32_t *)packetTest)[i], ((uint32_t *)packetTest)[i+1], ((uint32_t *)packetTest)[i+2], ((uint32_t *)packetTest)[i+3]);
+        printf("%08x %08x %08x %08x\n",((uint32_t *)packetTest)[i+4], ((uint32_t *)packetTest)[i+5], ((uint32_t *)packetTest)[i+6], ((uint32_t *)packetTest)[i+7]);
+     }
+     free(packetTest);
+     return 0;
 }
 
 int read_socket(int filedes) {
