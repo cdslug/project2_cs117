@@ -30,8 +30,7 @@ int main(int argc, char *argv[])
     char * hostname; // host name of server
     char buf[BUFLEN];
     struct sockaddr_in serv_addr; // server address
-	struct sockaddr_in cli_addr; // client address
-	socklen_t servlen = sizeof(serv_addr);
+    socklen_t servlen = sizeof(serv_addr);
     struct hostent *server; //contains tons of information, including the server's IP address
 
 
@@ -43,18 +42,8 @@ int main(int argc, char *argv[])
     filename = argv[3];
 
     /* create UDP socket */
-    if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) //create a new socket
+    if((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) //create a new socket
         error("ERROR opening socket");
-
-	/* bind UDP socket */
-	memset((char *) &cli_addr, 0, sizeof(cli_addr)); //clear memory for socket
-	//fill in address info
-	cli_addr.sin_family = AF_INET;
-	cli_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	cli_addr.sin_port = htons(portno);
-	if((bind(sockfd, (struct sockaddr *) &cli_addr, sizeof(cli_addr))) < 0) {
-		error("ERROR, binding socket");
-	}
 
     server = gethostbyname(hostname); //takes a string like "www.yahoo.com", and returns a struct hostent which contains information, as IP address, address type, the length of the addresses...
     if (server == NULL) {
