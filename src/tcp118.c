@@ -12,11 +12,11 @@ cwnd_t* cwnd_init(cwnd_t *cwnd)
 	cwnd->next_seq = 0;
 	cwnd->acks = malloc(sizeof(uint8_t)*C_WND*2);
 	memset(cwnd->acks, 0, sizeof(uint8_t) * (C_WND * 2));
-	cwnd->packets = (char **)malloc(sizeof(char*)*(C_WND * 2));
+	cwnd->packets = (byte_t **)malloc(sizeof(byte_t*)*(C_WND * 2));
 
 	for(i = 0; i < (C_WND * 2)/PACKET_SIZE; i++)
 	{
-		cwnd->packets[i] = malloc(sizeof(char)*PACKET_SIZE);
+		cwnd->packets[i] = malloc(sizeof(byte_t)*PACKET_SIZE);
 	}
 
 	// printf("cwnd_init: start print\n");
@@ -55,6 +55,13 @@ uint32_t cwnd_lastMss(cwnd_t *cwnd)
 	return (cwnd->last_seq/PACKET_SIZE) % cwnd->size;
 }
 
+uint32_t cwnd_numPendingAcks(cwnd_t *cwnd)
+{
+	uint32_t num = (cwnd_nextMss(cwnd)-cwnd_lastMss(cwnd)) % (cwnd->size/PACKET_SIZE + 1);
+	printf("cwnd_numPendingAcks: nextMss=%d, lastMss=%d\n",cwnd_lastMss(cwnd), cwnd_nextMss(cwnd));
+	printf("cwnd_numPendingAcks: num=%d\n",num);
+	return num;
+}
 bool cwnd_getAck(cwnd_t *cwnd, uint32_t seqNum)
 {
 	if(cwnd->acks[seqNum%cwnd->size] == 0)
@@ -69,15 +76,27 @@ bool cwnd_getAck(cwnd_t *cwnd, uint32_t seqNum)
 
 bool cwnd_checkIn(cwnd_t *cwnd, uint32_t seqNum)
 {
-	return false;
+	if(seqNum >= cwnd->last_seq && seqNum < cwnd->next_seq)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
 }
 
-bool cwnd_checkAdd(cwnd_t *cwnd, uint32_t seqNum)
+bool cwnd_checkAdd(cwnd_t *cwnd)
 {
-	return false;
+	if(cwnd->next_seq-cwnd->last_seq >= C_WND){
+		return false;
+	}
+	else{
+		return true;
+	}
 }
 
-bool cwnd_addPkt(cwnd_t *cwnd, char *buf)
+bool cwnd_addPkt(cwnd_t *cwnd, byte_t *buf)
 {
 	//need to do checks first
 	printf("cwnd_addPkt: nextMss=%d\n", cwnd_nextMss(cwnd));
@@ -94,13 +113,13 @@ bool cwnd_addPkt(cwnd_t *cwnd, char *buf)
 	return false;
 }
 
-int cwnd_nextMsgIndex(cwnd_t *cwnd)
+int cwnd_lastPktIndex(cwnd_t *cwnd)
 {
 	int i = cwnd_lastMss(cwnd);
 	do{
 		if(cwnd->acks[i] == 0)
 		{
-			printf("cwnd_nextMsgIndex: index=%d\n",i);
+			printf("cwnd_lastPktIndex: index=%d\n",i);
 			return i;
 		}
 		i = (i+1)%((C_WND*2)/PACKET_SIZE);
@@ -108,29 +127,14 @@ int cwnd_nextMsgIndex(cwnd_t *cwnd)
 	return -1;
 }
 
-uint8_t cwnd_nextMsgLen(cwnd_t *cwnd)
+byte_t * cwnd_getLastPkt(cwnd_t *cwnd)
 {
-	int i = cwnd_nextMsgIndex(cwnd);
-	printf("cwnd_nextMsgLen: index=%d\n",i);
-	if(i >= 0)
-	{
-		printf("cwnd_nextMsgLen: size=%d\n",getSize(cwnd->packets[i]));
-		return getSize(cwnd->packets[i]);
-	}
-	else
-	{
-		return 0;
-	}
-		//update the sequence number
-}
-char * cwnd_nextMsg(cwnd_t *cwnd)
-{
-	int i = cwnd_nextMsgIndex(cwnd);
+	int i = cwnd_lastPktIndex(cwnd);
 
 	if(i >= 0)
 	{
-		printf("cwnd_nextMsg: msg=%s\n",getBody(cwnd->packets[0]));
-		return getBody(cwnd->packets[i]);
+		printf("cwnd_getLastPkt: msg=%s\n",getBody(cwnd->packets[0]));
+		return cwnd->packets[i];
 	}
 	else
 	{
@@ -138,9 +142,9 @@ char * cwnd_nextMsg(cwnd_t *cwnd)
 	}
 }
 
-void cwnd_markNextMsgRead(cwnd_t *cwnd)
+void cwnd_markLastPktRead(cwnd_t *cwnd)
 {
-	int i = cwnd_nextMsgIndex(cwnd);
+	int i = cwnd_lastPktIndex(cwnd);
 	if(i >= 0)
 	{
 		cwnd->acks[i] = true;
@@ -176,30 +180,30 @@ uint16_t checksum(const uint8_t * addr, uint32_t count)
 	return checksum;
 }
 
-uint32_t getSeqNum(const char * pkt)
+uint32_t getSeqNum(const byte_t * pkt)
 {
 	return ((uint32_t *)pkt)[SEQ_NUM_OFFSET>>5];
 }
 
-void setSeqNum(char * pkt, uint32_t seqNum)
+void setSeqNum(byte_t * pkt, uint32_t seqNum)
 {
 	((uint32_t *)pkt)[SEQ_NUM_OFFSET>>5] = seqNum;
 	//SEGFAULT when trying to use pkt in here
 }
 
-uint32_t getACKNum(const char * pkt)
+uint32_t getACKNum(const byte_t * pkt)
 {
 	return ((uint32_t *)pkt)[ACK_NUM_OFFSET>>5];
 }
 
-void setACKNum(char * pkt, uint32_t ACKNum)
+void setACKNum(byte_t * pkt, uint32_t ACKNum)
 {
 	int index = ACK_NUM_OFFSET>>5;
 	((uint32_t *)pkt)[index] = ACKNum;
 	// printf("setACKNum: index=%d\n",index);
 }
 
-bool getACK(const char * pkt)
+bool getACK(const byte_t * pkt)
 {
 	uint32_t temp = ((uint32_t *)pkt)[ACK_OFFSET>>5];
 	// printf("getACK: temp=%x\n",temp);
@@ -208,7 +212,7 @@ bool getACK(const char * pkt)
 	return temp;
 }
 
-void setACK(char * pkt, bool ACK)
+void setACK(byte_t * pkt, bool ACK)
 {
 	// int offset = ACK_OFFSET;
 	uint32_t temp = ACK;
@@ -221,16 +225,23 @@ void setACK(char * pkt, bool ACK)
 }	
 
 
-bool getLast(const char * pkt)
+bool getLast(const byte_t * pkt)
 {
-	uint32_t temp = ((uint32_t *)pkt)[LAST_OFFSET>>5];
+
+	uint32_t temp = 0;
+	if (pkt == NULL)
+	{ 
+		printf("getLast: pkt is NULL\n");
+		return true;
+	}
+	temp = ((uint32_t *)pkt)[LAST_OFFSET>>5];
 	// printf("getLast: temp=%x\n",temp);
 	temp = temp >> 30;
 	temp = temp & 0x1;
 	return temp;
 }
 
-void setLast(char * pkt, bool last)
+void setLast(byte_t * pkt, bool last)
 {
 		// int offset = ACK_OFFSET;
 	uint32_t temp = last;
@@ -242,7 +253,7 @@ void setLast(char * pkt, bool last)
 	// printf("setLast: last=%x\n",((uint32_t *)pkt)[LAST_OFFSET>>5] );
 }
 
-bool getShake(const char * pkt)
+bool getShake(const byte_t * pkt)
 {
 	uint32_t temp = ((uint32_t *)pkt)[SHAKE_OFFSET>>5];
 	// printf("getLast: temp=%x\n",temp);
@@ -251,7 +262,7 @@ bool getShake(const char * pkt)
 	return temp;
 }
 
-void setShake(char * pkt, bool last)
+void setShake(byte_t * pkt, bool last)
 {
 		// int offset = ACK_OFFSET;
 	uint32_t temp = last;
@@ -263,18 +274,19 @@ void setShake(char * pkt, bool last)
 	// printf("setLast: last=%x\n",((uint32_t *)pkt)[LAST_OFFSET>>5] );
 }
 
-uint16_t getSize(const char * pkt)
+uint16_t getSize(const byte_t * pkt)
 {
 	uint32_t temp = ((uint32_t *)pkt)[SIZE_OFFSET>>5];
 	// printf("getSize: temp=%x\n",temp);
 	temp = temp >> 16;
-	temp = temp & 0x2FF;
+	temp = temp & 0x3FF;
 	return (uint16_t)temp;
 }
 
-int setSize(char * pkt, uint16_t size)
+int setSize(byte_t * pkt, uint16_t size)
 {
 		// int offset = ACK_OFFSET;
+	printf("setSize: start size=%d\n",size);
 	uint32_t temp = size;
 	int ret = size;
 	if(size > MAX_BODY_SIZE){
@@ -283,13 +295,14 @@ int setSize(char * pkt, uint16_t size)
 	}
 
 	temp = temp << 16;
-
+	printf("setSize: temp=%x\n",temp);
 	((uint32_t *)pkt)[SIZE_OFFSET>>5] = (((uint32_t *)pkt)[SIZE_OFFSET>>5]&0xFC00FFFF) | temp;
-
+	printf("setSize: size=%d\n",getSize(pkt));
 	// printf("setSize: size=%x\n",((uint32_t *)pkt)[SIZE_OFFSET>>5] );
+	return ret;
 }
 
-uint16_t getChecksum(const char *pkt)
+uint16_t getChecksum(const byte_t *pkt)
 {
 	uint32_t temp = ((uint32_t *)pkt)[CHECKSUM_OFFSET>>5];
 	// printf("getChecksum: temp=%x\n",temp);
@@ -297,20 +310,20 @@ uint16_t getChecksum(const char *pkt)
 	return (uint16_t)temp;
 }
 
-void setChecksum(char * pkt, uint16_t checksum)
+void setChecksum(byte_t * pkt, uint16_t checksum)
 {
 	uint32_t temp = checksum & 0x0000FFFF;
 	((uint32_t *)pkt)[CHECKSUM_OFFSET>>5] = (((uint32_t *)pkt)[CHECKSUM_OFFSET>>5]&0xFFFF0000) | temp;
 
 }
 
-char * getBody(const char * pkt)
+byte_t * getBody(const byte_t * pkt)
 {
 	//strdup?
 	return strdup(&(pkt[BODY_OFFSET>>3]));
 }
 
-int setBody(char * pkt, char * buff, size_t count)
+int setBody(byte_t * pkt, byte_t * buff, size_t count)
 {
 
 	int i = 0; 
@@ -327,13 +340,13 @@ int setBody(char * pkt, char * buff, size_t count)
 	return copied;
 }
 
-char * generatePacket(char * pkt,
+byte_t * generatePacket(byte_t * pkt,
 					   uint32_t seq_num, 
 					   uint32_t ack_num, 
 					   bool ack, 
 					   bool last,
 					   bool shake,
-					   char * buff,
+					   byte_t * buff,
 					   size_t count)
 {
 	//pkt should be allocated before entering this function;
@@ -361,18 +374,25 @@ char * generatePacket(char * pkt,
 	}
 }
 
-void printPacket(char * pkt)
+void printPacket(byte_t * pkt)
 {
 	if(pkt == NULL){
 		//bad things
 		printf("printPacket: was not given a valid string\n");
 	}
 	else{
-		char * body = getBody(pkt);
+		int i = 0;
+		byte_t * body = getBody(pkt);
 		uint16_t cs_msg = getChecksum(pkt);
 		uint16_t cs_valid = checksum(pkt,PACKET_SIZE);
 
 		printf("printPacket:\n");
+		printf("\tpkt bits\n");
+     	for(i = 0; i < PACKET_SIZE/32; i+=8)
+     	{
+            printf("%08x %08x %08x %08x ",((uint32_t *)pkt)[i], ((uint32_t *)pkt)[i+1], ((uint32_t *)pkt)[i+2], ((uint32_t *)pkt)[i+3]);
+        	printf("%08x %08x %08x %08x\n",((uint32_t *)pkt)[i+4], ((uint32_t *)pkt)[i+5], ((uint32_t *)pkt)[i+6], ((uint32_t *)pkt)[i+7]);
+     	}
 		printf("\tseq_num=%x\n", getSeqNum(pkt));
 		printf("\tack_num=%x\n", getACKNum(pkt));
 		printf("\tack=%d\n", getACK(pkt));
@@ -381,59 +401,83 @@ void printPacket(char * pkt)
 		printf("\tchecksum:\n");
 		printf("\t\tcs_msg=%x\n",cs_msg);
 		printf("\t\tcs_valid==0?=%x\n", cs_valid);
-		printf("\tbody=\n\t:%s\n",body);
+		printf("\tbody=\n\t:");
+		for(i = 0; i < getSize(pkt); i++)
+		{
+			printf("%c",body[i]);
+		}
+		printf("\n");
 		printf("printPacket: END\n");
 		free(body);
 	}
 }
 
-void freePacket(char * pkt)
+void freePacket(byte_t * pkt)
 {
 	free(pkt);
 	pkt = NULL;
 }
 
-//need to support binary files by using memcpy instead of strncpy
-/*
-char** strToPackets(const char * file_s)
+void freePackets(byte_t **pkts)
 {
-	int fileSize = 0;
+	int i = 0;
+	for(i = 0; pkts[i] != 0; i++)
+	{
+		freePacket(pkts[i]);
+	}
+	free(pkts);
+}
+
+//need to support binary files by using memcpy instead of strncpy
+
+byte_t** bufToPackets(byte_t * buf, uint32_t nbytes)
+{
 	int numPackets = 0;
 	int i = 0;
-	char **packetArray = NULL;
+	byte_t **packetArray = NULL;
 
-	if(file_s == NULL){
-		return NULL; //maybe I should return an allocated char**
+	if(buf == NULL){
+		return NULL; //maybe I should return an allocated byte_t**
 	}
 
-	fileSize = strlen(file_s);
-	numPackets = (fileSize+(MAX_BODY_SIZE-1))/MAX_BODY_SIZE; //rounds up
-	printf("fTP, number of packets=%d\n",numPackets);
+
+	numPackets = (nbytes+(MAX_BODY_SIZE-1))/MAX_BODY_SIZE; //rounds up
+	printf("bufToPackets, number of packets=%d\n",numPackets);
 	//allocate space
-	printf("fTP, before packetarray malloc\n");
-	packetArray = (char**)malloc(sizeof(char*) * (numPackets+1));
-	memset(packetArray, 0, sizeof(char*)*(numPackets+1));
+	printf("bufToPackets, before packetarray malloc\n");
+	packetArray = (byte_t**)malloc(sizeof(byte_t*) * (numPackets+1));
+	memset(packetArray, 0, sizeof(byte_t*)*(numPackets+1));
 	for(i = 0; i < numPackets; i++){
-		printf("fTP, allocating string %d\n", i);
-		packetArray[i] = (char*)malloc(sizeof(char) * (MAX_BODY_SIZE+1));
-		memset(packetArray[i], '\0', sizeof(char)*(MAX_BODY_SIZE+1));
+		printf("bufToPackets, allocating string %d\n", i);
+		packetArray[i] = (byte_t*)malloc(sizeof(byte_t) * (PACKET_SIZE));
+		memset(packetArray[i], '\0', sizeof(byte_t)*(PACKET_SIZE));
 	}
 
 	//divide up the file string
 	for(i = 0; i < numPackets; i++){
-		printf("fTP, copying file to packet %d\n",i);
-		strncpy(packetArray[i], &(file_s[i*MAX_BODY_SIZE]), MAX_BODY_SIZE);
+		int pieceLen = MAX_BODY_SIZE;
+		printf("bufToPackets, copy to pkt#=%d, nbytes=%d, pieceLen=%d\n",i, nbytes, pieceLen);
+		if(nbytes < MAX_BODY_SIZE)
+		{
+			pieceLen = nbytes;
+			nbytes = 0;
+			generatePacket(packetArray[i], 0,0,0,1,0,&(buf[i*MAX_BODY_SIZE]), pieceLen);
+		}
+		else{
+			nbytes -= MAX_BODY_SIZE;
+			generatePacket(packetArray[i], 0,0,0,0,0,&(buf[i*MAX_BODY_SIZE]), pieceLen);
+		}		
 	}
 
 	return packetArray;
 }
-*/
+
 
 //takes care of timeout
 int writePacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndW)
 {
 	int ret = -1;
-	char buf[PACKET_SIZE];
+	byte_t buf[PACKET_SIZE];
 	memset(buf, 0, PACKET_SIZE);
 
 	memcpy(buf, cwndW->packets[cwnd_lastMss(cwndW)], PACKET_SIZE);
@@ -476,7 +520,7 @@ int writePacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t
 //should take care of piecing together the body of the file
 int readPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndR)
 {
-	char buf[PACKET_SIZE];
+	byte_t buf[PACKET_SIZE];
 	int bytesrecv = 0;
 
 	//would like to assume msgBody is a null pointer
@@ -504,7 +548,7 @@ int readPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t 
 
 bool readAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndW)
 {
-	char buf[PACKET_SIZE];
+	byte_t buf[PACKET_SIZE];
 	int bytesrecv = 0;
 	bool ret = false;
 
@@ -552,7 +596,7 @@ bool readAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwn
 
 bool writeAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndR)
 {
-	char buf[PACKET_SIZE],pkt[PACKET_SIZE];
+	byte_t buf[PACKET_SIZE],pkt[PACKET_SIZE];
 	int lastMss = cwnd_lastMss(cwndR);
 
 	if(cwnd_lastMss(cwndR) == cwnd_nextMss(cwndR))
@@ -569,12 +613,13 @@ bool writeAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cw
 		error("sendto");
 		return false;
 	}
+	cwnd_markLastPktRead(cwndR);
 	return true;
 }
 /*
 int connectTCP(int sockfd, struct sockaddr_in sockaddr, socklen_t socklen)
 {
-	char pkt[PACKET_SIZE];
+	byte_t pkt[PACKET_SIZE];
 	int bytessent = 0, ret = -1;
 
 	pkt= generatePacket(pkt,0,0,0,1,1,"", 0);
@@ -596,7 +641,7 @@ int connectTCP(int sockfd, struct sockaddr_in sockaddr, socklen_t socklen)
 
 int acceptTCP(int sockfd, struct sockaddr_in sockaddr, socklen_t socklen)
 {
-	char *msgBody = NULL;
+	byte_t *msgBody = NULL;
 	int bytesrecv = 0;
 	int ret = -1;
 
@@ -632,25 +677,33 @@ int acceptTCP(int sockfd, struct sockaddr_in sockaddr, socklen_t socklen)
 // ABOUT: the main function for transfering files
 //			uses handshake and transfer functions
 //        creates the contention window. 
-int writeTCP(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, char * buf, size_t nbytes)
+int writeTCP(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, byte_t * buf, size_t nbytes)
 {
-	char *pkt;//for testing
+	int i = 0;
+	byte_t **pkts = NULL;//for testing
 	cwnd_t *cwndR;
     cwnd_t *cwndW;
 
-    pkt = malloc(PACKET_SIZE);
     cwndR = cwnd_init(cwndR);
     cwndW = cwnd_init(cwndW);
-	//read file
 
-	//break up file into packets
+	//break up buf into packets
+	pkts = bufToPackets(buf, nbytes);
 
 	//write packets 
-	pkt = generatePacket(pkt,cwndW->next_seq,cwndW->next_seq,0,1,0,buf,nbytes);
-	cwnd_addPkt(cwndW, pkt);
-   	free(pkt);
-   	writePacket(sockfd, sockaddr, socklen, cwndW);
-    readAckPacket(sockfd, sockaddr, socklen, cwndW);
+	while(cwnd_numPendingAcks(cwndW) > 0)
+	{
+		if(pkts[i] != 0 && cwnd_checkAdd(cwndW))
+		{
+			cwnd_addPkt(cwndW, pkts[i]);
+			i++;
+		}
+		writePacket(sockfd, sockaddr, socklen, cwndW);
+    	while(readAckPacket(sockfd, sockaddr, socklen, cwndW) == true);
+		
+	}
+   	freePackets(pkts);
+   	
 
     cwnd_free(cwndR);
 	cwnd_free(cwndW);
@@ -662,10 +715,11 @@ int writeTCP(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, char * bu
 // RETURNS: number of bytes read in the message body
 // ABOUT: the main function for reading TCP118 packets
 //		 probably should use congestion window, but not sure why
-int readTCP(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, char * msgBody)
+int readTCP(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, byte_t * msgBody)
 {
-	int bytesrecv = 0, msglen = 0;
-	char msgBuf[MAX_BODY_SIZE];
+	int bytesrecv = 0, msgLen = 0;
+	byte_t *pkt = NULL;
+
 	cwnd_t *cwndR;
     cwnd_t *cwndW;
 
@@ -679,34 +733,35 @@ int readTCP(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, char * msg
 		msgBody = NULL;
 	}
 	msgBody = malloc(MAX_BODY_SIZE);
-
+	memset(msgBody, 0, MAX_BODY_SIZE);
 	do{
-		printf("readTCP: start do\n");
-		uint8_t thisMsgLen = 0;
-		memset(msgBuf, 0, MAX_BODY_SIZE);
-		printf("readTCP: before readPacket\n");
+		// printf("readTCP: start do\n");
+		uint8_t currLen = 0;
+		
+		// printf("readTCP: before readPacket\n");
 		bytesrecv = readPacket(sockfd, sockaddr, socklen, cwndR);
 		//writeAck should work even if nothing was received
-		printf("readTCP: before readPacket\n");
-		if(bytesrecv > 0)
+		// printf("readTCP: after readPacket\n");
+		pkt = cwnd_getLastPkt(cwndR);
+		if(pkt != NULL)
 		{
-			thisMsgLen += cwnd_nextMsgLen(cwndR);
-			printf("readTCP: msglen=%d\n", thisMsgLen);
-			memcpy(msgBuf, cwnd_nextMsg(cwndR),thisMsgLen);
-			cwnd_markNextMsgRead(cwndR);
+			currLen += getSize(pkt);
+			printf("readTCP: currLen=%d\n", currLen);
+			printf("readTCP: currMsg=%s\n",getBody(pkt));
+			//ack will mark the last packet read
 			writeAckPacket(sockfd, sockaddr, socklen, cwndR);
-			msgBody = realloc(msgBody, msglen + thisMsgLen);
-			memcpy(&(msgBody[msglen]), msgBuf, msglen);
-			msglen += thisMsgLen;
-			if(thisMsgLen < MAX_BODY_SIZE) break;//temp fix to waiting read
+			msgBody = realloc(msgBody, msgLen + currLen);
+			memcpy(&(msgBody[msgLen]), getBody(pkt), currLen);
+			msgLen += currLen;
+			//if(currLen < MAX_BODY_SIZE) break;//temp fix to waiting read
 		}
 		printf("readTCP: bytesrecv=%d\n",bytesrecv);
-	}while(bytesrecv != 0);
+	}while(getLast(pkt) == false);
 	printf("readTCP: appended all of file\n");
 	printf("readTCP: msg=%s\n",msgBody);
     cwnd_free(cwndR);
 	cwnd_free(cwndW);
-	return msglen;
+	return msgLen;
 }
 
 
@@ -716,26 +771,3 @@ int readTCP(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, char * msg
 // ABOUT: the main function for transfering files
 //			uses handshake and transfer functions
 
-
-int readFile(char * fileName, char * fileBuf, int BUFLEN){
-	char ch;
-	FILE *fp;
-
-	assert(fileBuf!=NULL);
-	memset(fileBuf, 0, BUFLEN); // clear fileContent buffer
-
-	fp = fopen(fileName, "r"); // open the file in read mode
-
-	if(fp == NULL){ 
-		return -1; //return -1 for error state
-	}
-
-	int n = 0;
-	while((ch = fgetc(fp)) != EOF ){
-		assert(n < BUFLEN);
-		fileBuf[n++] = ch;
-	}
-
-	fclose(fp);
-	return n;
-}
