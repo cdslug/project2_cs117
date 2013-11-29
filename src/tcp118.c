@@ -474,18 +474,18 @@ byte_t** bufToPackets(byte_t * buf, uint32_t nbytes)
 
 
 //takes care of timeout
-int writePacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndW)
+int writePacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndW, double p_corr)
 {
-	int ret = -1;
 	byte_t buf[PACKET_SIZE];
 	memset(buf, 0, PACKET_SIZE);
 
-	memcpy(buf, cwndW->packets[cwnd_lastMss(cwndW)], PACKET_SIZE);
+	// if packet is corrupt, it will send a packet of zeros
+	if(!p_check(p_corr)){
+		memcpy(buf, cwndW->packets[cwnd_lastMss(cwndW)], PACKET_SIZE);
+	}
 	if (sendto(sockfd, buf, PACKET_SIZE, 0, sockaddr, socklen)<0) {
 		error("sendto");
-		ret = -1;
 	}
-	else{
 		/*
 		//wait for ACK
 		do{
@@ -510,10 +510,8 @@ int writePacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t
 			ret = -1;
 		}
 		*/
-		printf("writePacket: packet sent!\n");
-		ret = 0;
-	}
-	return ret;
+	printf("writePacket: packet sent!\n");
+	return 0;
 }
 
 
@@ -677,7 +675,7 @@ int acceptTCP(int sockfd, struct sockaddr_in sockaddr, socklen_t socklen)
 // ABOUT: the main function for transfering files
 //			uses handshake and transfer functions
 //        creates the contention window. 
-int writeTCP(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, byte_t * buf, size_t nbytes)
+int writeTCP(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, byte_t * buf, size_t nbytes, double p_loss, double p_corr)
 {
 	int i = 0;
 	byte_t **pkts = NULL;//for testing
@@ -686,6 +684,7 @@ int writeTCP(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, byte_t * 
 
     cwndR = cwnd_init(cwndR);
     cwndW = cwnd_init(cwndW);
+    seed(); // seed random for packet loss and corruption
 
 	//break up buf into packets
 	pkts = bufToPackets(buf, nbytes);
@@ -698,7 +697,9 @@ int writeTCP(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, byte_t * 
 			cwnd_addPkt(cwndW, pkts[i]);
 			i++;
 		}
-		writePacket(sockfd, sockaddr, socklen, cwndW);
+
+		if(!p_check(p_loss))
+			writePacket(sockfd, sockaddr, socklen, cwndW, p_corr);
     	while(readAckPacket(sockfd, sockaddr, socklen, cwndW) == true);
 		
 	}

@@ -95,20 +95,20 @@ void freePackets(byte_t **pkts);
 
 byte_t** bufToPackets(byte_t * buf, uint32_t nbytes);
 
-int writePacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndW);
+int writePacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndW, double p_corr);
 int readPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndR);
 
 
 //to be used after sending a packet
 bool readAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndW);
 //to be used after reading a packet
-bool writeAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndR);
+bool writeAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndR, double p_corr);
 
 //int acceptTCP(int sockFD, struct sockaddr *sockaddr, socklen_t socklen);
 //int connectTCP(int sockFD, struct sockaddr *sockaddr, socklen_t socklen);
 
-int writeTCP(int sockFD, struct sockaddr *socaddr, socklen_t socklen, byte_t * buf, size_t nbytes);
-int readTCP(int sockFD, struct sockaddr *socaddr, socklen_t socklen, byte_t * msgBody);
+int writeTCP(int sockFD, struct sockaddr *socaddr, socklen_t socklen, byte_t * buf, size_t nbytes, double p_loss, double p_corr);
+int readTCP(int sockFD, struct sockaddr *socaddr, socklen_t socklen, byte_t * msgBody, double p_loss, double p_corr);
 
 
 
