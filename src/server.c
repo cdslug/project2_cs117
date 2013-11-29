@@ -61,18 +61,40 @@ int main(int argc, char * argv[]){
 
 	while(1) {
 		printf("waiting on port %d\n", portno);
+		// receive file request
 		bytesrecv = recvfrom(sockfd, buf, BUFSIZE, 0, (struct sockaddr *)&cli_addr, &clilen);
 		if(bytesrecv > 0) {
 			buf[bytesrecv] = 0;
-			printf("received message: %s\n", buf);
+			printf("received request for %s\n", buf);
 		}
 		else
-			printf("Error receiving message!\n");
-		// echo file request
-		printf("sending echo response \"%s\"\n", buf);
-		if(sendto(sockfd, buf, strlen(buf), 0, (struct sockaddr *)& cli_addr, clilen) < 0) {
-			error("sendto");
+			printf("Error receiving request!\n");
+
+		int fbytesread;
+		char fileBuf[MAX_FILE_SIZE];
+		char * fileName;
+
+		fileName = strdup(buf);
+
+		//read file into file buffer
+		printf("Reading file...");
+		fbytesread = readFile(fileName, fileBuf, MAX_FILE_SIZE);
+		if(fbytesread > 0) {
+ 			printf("File Content: \n%s", fileBuf);
 		}
+		else
+			printf("Error reading file!\n");
+		/*
+		while(filePackets being sent){
+			sendPacket(1...n)
+			receiveAck(1...n)
+			notreceiveAck(i)
+			resend(i)
+			if(sendto(sockfd, buf, strlen(buf), 0, (struct sockaddr *)& cli_addr, clilen) < 0) {
+				error("sendto");
+			}
+		}
+		*/
 	}
 	// never exits
 
