@@ -1,4 +1,5 @@
 #include "tcp118.h"
+#include "probability.h"
 
 cwnd_t* cwnd_init(cwnd_t *cwnd)
 {
@@ -592,7 +593,7 @@ bool readAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwn
 	return ret;
 }
 
-bool writeAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndR)
+bool writeAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndR, double p_corr)
 {
 	byte_t buf[PACKET_SIZE],pkt[PACKET_SIZE];
 	int lastMss = cwnd_lastMss(cwndR);
@@ -716,7 +717,7 @@ int writeTCP(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, byte_t * 
 // RETURNS: number of bytes read in the message body
 // ABOUT: the main function for reading TCP118 packets
 //		 probably should use congestion window, but not sure why
-int readTCP(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, byte_t * msgBody)
+int readTCP(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, byte_t * msgBody, double p_loss, double p_corr)
 {
 	int bytesrecv = 0, msgLen = 0;
 	byte_t *pkt = NULL;
@@ -750,7 +751,7 @@ int readTCP(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, byte_t * m
 			printf("readTCP: currLen=%d\n", currLen);
 			printf("readTCP: currMsg=%s\n",getBody(pkt));
 			//ack will mark the last packet read
-			writeAckPacket(sockfd, sockaddr, socklen, cwndR);
+			writeAckPacket(sockfd, sockaddr, socklen, cwndR, p_corr);
 			msgBody = realloc(msgBody, msgLen + currLen);
 			memcpy(&(msgBody[msgLen]), getBody(pkt), currLen);
 			msgLen += currLen;
