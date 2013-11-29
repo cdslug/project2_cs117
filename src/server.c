@@ -32,16 +32,22 @@ void error(char *msg)
 int main(int argc, char * argv[]){
 	int sockfd, portno; // sockfd:portno -> server socket
 	int bytesrecv;  /* # bytes received */
-	int msgcnt = 0; /* number of messages received */
+	int cWnd;
+    double p_loss, p_corr;
 	struct sockaddr_in serv_addr; // server address
 	struct sockaddr_in cli_addr; // client address
 	socklen_t clilen = sizeof(cli_addr);
 
 	char buf[BUFSIZE]; // receive buffer
 
-	if(argc < 2){
-		error("ERROR, no port provided\n");
+	if(argc != 5){
+    	error("ERROR, usage ./server portnumber CWnd P_l P_c");
 	}
+
+	portno = atoi(argv[1]);
+	cWnd = atoi(argv[2]);
+	p_loss = atof(argv[3]);
+	p_corr = atof(argv[4]);
 
 	/* create UDP socket */
 	if((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0){
@@ -51,7 +57,6 @@ int main(int argc, char * argv[]){
 	/* bind UDP socket */
 	memset((char *) &serv_addr, 0, sizeof(serv_addr)); //clear memory for socket
 	//fill in address info
-	portno = atoi(argv[1]);
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	serv_addr.sin_port = htons(portno);

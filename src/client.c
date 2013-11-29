@@ -27,6 +27,7 @@ int main(int argc, char *argv[])
 {
     int sockfd; //Socket descriptor
     int portno, bytesrecv;
+    double p_loss, p_corr;
     char * filename; // name of file to be requested
     char * hostname; // host name of server
     char buf[BUFLEN];
@@ -35,12 +36,14 @@ int main(int argc, char *argv[])
     struct hostent *server; //contains tons of information, including the server's IP address
 
 
-    if (argc != 4) {
-    	error("ERROR, usage ./client server_hostname server_portnumber filename");
+    if (argc != 6) {
+    	error("ERROR, usage ./client server_hostname server_portnumber filename P_l P_c");
     }
     hostname = argv[1];
     portno = atoi(argv[2]);
     filename = argv[3];
+    p_loss = atof(argv[4]);
+    p_corr = atof(argv[5]);
 
     /* create UDP socket */
     if((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) //create a new socket
