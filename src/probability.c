@@ -11,7 +11,8 @@ void seed(){
 	srand(time(NULL));
 }
 
-p_bool check_loss(double probability) {
+// returns whether or not packet was lost
+bool p_check(double probability) {
 	double p_val; // the value which stores our virtual "dice roll"
 
 	assert(probability >= 0 && probability <= 1); // valid probability is within the range 0 to 1
@@ -20,18 +21,6 @@ p_bool check_loss(double probability) {
 	if(p_val > probability){
 		return false;
 	}
-	else
-		return true;
-}
-p_bool check_corrupt(double probability){
-	double p_val; // the value which stores our virtual "dice roll"
-
-	assert(probability >= 0 && probability <= 1); // valid probability is within the range 0 to 1
-
-	p_val = rand()/(double)RAND_MAX;
-
-	if(p_val > probability)
-		return false;
 	else
 		return true;
 }
