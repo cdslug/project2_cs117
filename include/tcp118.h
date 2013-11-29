@@ -29,6 +29,7 @@
 #define CHECKSUM_OFFSET	80
 #define BODY_OFFSET     96
 
+typedef uint8_t byte_t;
 // typedef struct {
 // 	uint32_t seq_num;
 // 	uint32_t ack_num;
@@ -45,53 +46,54 @@ typedef struct {
 	uint32_t last_seq;
 	uint32_t next_seq;
 	uint8_t *acks;
-	char ** packets;
+	byte_t ** packets;
 } cwnd_t;
 
 cwnd_t *cwnd_init(cwnd_t *cwnd);
 void cwnd_free(cwnd_t *cwnd);
 uint32_t cwnd_nextMss(cwnd_t *cwnd);
 uint32_t cwnd_lastMss(cwnd_t *cwnd);
+uint32_t cwnd_numPendingAcks(cwnd_t *cwnd);
 bool cwnd_getAck(cwnd_t *cwnd, uint32_t seqNum);
 bool cwnd_checkIn(cwnd_t *cwnd, uint32_t seqNum);
-bool cwnd_checkAdd(cwnd_t *cwnd, uint32_t seqNum);
-bool cwnd_addPkt(cwnd_t *cwnd, char *buf);
-int cwnd_nextMsgIndex(cwnd_t *cwnd);
-uint8_t cwnd_nextMsgLen(cwnd_t *cwnd);
-char * cwnd_nextMsg(cwnd_t *cwnd);
-void cwnd_markNextMsgRead(cwnd_t *cwnd);
+bool cwnd_checkAdd(cwnd_t *cwnd);
+bool cwnd_addPkt(cwnd_t *cwnd, byte_t *buf);
+int cwnd_lastPktIndex(cwnd_t *cwnd);
+byte_t * cwnd_getLastPkt(cwnd_t *cwnd);
+void cwnd_markLastPktRead(cwnd_t *cwnd);
 
 uint16_t checksum(const uint8_t * addr, uint32_t count);
 
-uint32_t getSeqNum(const char * pkt);
-void setSeqNum(char * pkt, uint32_t seqNum);
-uint32_t getACKNum(const char * pkt);
-void setACKNum(char * pkt, uint32_t ACKNum);
-bool getACK(const char * pkt);
-void setACK(char * pkt, bool ACK);
-bool getLast(const char * pkt);
-void setLast(char * pkt, bool last);
-bool getShake(const char * pkt);
-void setShake(char * pkt, bool shake);
-uint16_t getSize(const char * pkt);
-int setSize(char * pkt, uint16_t size);
-uint16_t getChecksum(const char *pkt);
-void setChecksum(char * pkt, uint16_t checksum);
-char * getBody(const char * pkt);
-int setBody(char * pkt, char * buff, size_t count);
+uint32_t getSeqNum(const byte_t * pkt);
+void setSeqNum(byte_t * pkt, uint32_t seqNum);
+uint32_t getACKNum(const byte_t * pkt);
+void setACKNum(byte_t * pkt, uint32_t ACKNum);
+bool getACK(const byte_t * pkt);
+void setACK(byte_t * pkt, bool ACK);
+bool getLast(const byte_t * pkt);
+void setLast(byte_t * pkt, bool last);
+bool getShake(const byte_t * pkt);
+void setShake(byte_t * pkt, bool shake);
+uint16_t getSize(const byte_t * pkt);
+int setSize(byte_t * pkt, uint16_t size);
+uint16_t getChecksum(const byte_t *pkt);
+void setChecksum(byte_t * pkt, uint16_t checksum);
+byte_t * getBody(const byte_t * pkt);
+int setBody(byte_t * pkt, byte_t * buff, size_t count);
 
-char * generatePacket( char * pkt,
+byte_t * generatePacket( byte_t * pkt,
 					   uint32_t seq_num, 
 					   uint32_t ack_num, 
 					   bool ack, 
 					   bool last,
 					   bool shake,
-					   char * buff,
+					   byte_t * buff,
 					   size_t count);
-void printPacket(char * pkt);
-void freePacket(char * pkt);
+void printPacket(byte_t * pkt);
+void freePacket(byte_t * pkt);
+void freePackets(byte_t **pkts);
 
-char** strToPackets(const char * file_s);
+byte_t** bufToPackets(byte_t * buf, uint32_t nbytes);
 
 int writePacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndW);
 int readPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndR);
@@ -105,8 +107,8 @@ bool writeAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cw
 //int acceptTCP(int sockFD, struct sockaddr *sockaddr, socklen_t socklen);
 //int connectTCP(int sockFD, struct sockaddr *sockaddr, socklen_t socklen);
 
-int writeTCP(int sockFD, struct sockaddr *socaddr, socklen_t socklen, char * buf, size_t nbytes);
-int readTCP(int sockFD, struct sockaddr *socaddr, socklen_t socklen, char * msgBody);
+int writeTCP(int sockFD, struct sockaddr *socaddr, socklen_t socklen, byte_t * buf, size_t nbytes);
+int readTCP(int sockFD, struct sockaddr *socaddr, socklen_t socklen, byte_t * msgBody);
 
 
 
