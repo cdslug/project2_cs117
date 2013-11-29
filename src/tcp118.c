@@ -771,3 +771,26 @@ int readTCP(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, byte_t * m
 // ABOUT: the main function for transfering files
 //			uses handshake and transfer functions
 
+
+int readFile(char * fileName, char * fileBuf, int BUFLEN){
+	char ch;
+	FILE *fp;
+
+	assert(fileBuf!=NULL);
+	memset(fileBuf, 0, BUFLEN); // clear fileContent buffer
+
+	fp = fopen(fileName, "r"); // open the file in read mode
+
+	if(fp == NULL){ 
+		return -1; //return -1 for error state
+	}
+
+	int n = 0;
+	while((ch = fgetc(fp)) != EOF ){
+		assert(n < BUFLEN);
+		fileBuf[n++] = ch;
+	}
+
+	fclose(fp);
+	return n;
+}

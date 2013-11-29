@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
 		bytesrecv = recvfrom(sockfd, buf, BUFLEN, 0, (struct sockaddr *)&serv_addr, &servlen);
 		if(bytesrecv > 0){
 			buf[bytesrecv] = 0;
-			printf("received message: %s", buf);
+			printf("received message: %s\n", buf);
 			// send ACK
 			sprintf(buf, "ack %d", pktcnt++);
 			if (sendto(sockfd, buf, strlen(buf), 0, (struct sockaddr *)&serv_addr, servlen)==-1) {
