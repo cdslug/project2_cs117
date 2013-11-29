@@ -13,6 +13,7 @@
 #include <assert.h>
 #include <time.h>
 #include <stdbool.h>
+#include "probability.h"
 
 #define PACKET_SIZE 1024
 #define HEADER_SIZE 12
