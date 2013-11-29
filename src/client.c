@@ -1,8 +1,11 @@
-
 /*
- A simple client in the internet domain using TCP
- Usage: ./client hostname port (./client 192.168.0.151 10000)
+ * client_spencer.c
+ *
+ *  Created on: Nov 26, 2013
+ *      Author: spencer
  */
+
+
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -10,87 +13,70 @@
 #include <netdb.h>      // define structures like hostent
 #include <stdlib.h>
 #include <strings.h>
+#include "tcp118.h"
 
 void error(char *msg)
 {
     perror(msg);
-    exit(0);
+    exit(1);
 }
+
+#define BUFLEN 1024
 
 int main(int argc, char *argv[])
 {
     int sockfd; //Socket descriptor
-    int portno, n,nread, nwrite, received_bytes;
-    struct sockaddr_in serv_addr;
+    int portno, bytesrecv;
+    char * filename; // name of file to be requested
+    char * hostname; // host name of server
+    char buf[BUFLEN];
+    struct sockaddr_in serv_addr; // server address
+    socklen_t servlen = sizeof(serv_addr);
     struct hostent *server; //contains tons of information, including the server's IP address
 
-    char buffer[256];
-    if (argc < 3) {
-       fprintf(stderr,"usage %s hostname port\n", argv[0]);
-       exit(0);
+
+    if (argc != 4) {
+    	error("ERROR, usage ./client server_hostname server_portnumber filename");
     }
-    
+    hostname = argv[1];
     portno = atoi(argv[2]);
-    sockfd = socket(AF_INET, SOCK_STREAM, 0); //create a new socket
-    if (sockfd < 0) 
+    filename = argv[3];
+
+    /* create UDP socket */
+    if((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) //create a new socket
         error("ERROR opening socket");
-    
-    server = gethostbyname(argv[1]); //takes a string like "www.yahoo.com", and returns a struct hostent which contains information, as IP address, address type, the length of the addresses...
+
+    server = gethostbyname(hostname); //takes a string like "www.yahoo.com", and returns a struct hostent which contains information, as IP address, address type, the length of the addresses...
     if (server == NULL) {
-        fprintf(stderr,"ERROR, no such host\n");
-        exit(0);
+    	error("ERROR, host assignment");
     }
-    
+
     memset((char *) &serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET; //initialize server's address
     bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
     serv_addr.sin_port = htons(portno);
-    
-    if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0) //establish a connection to the server
-        error("ERROR connecting");
-    
-    // printf("Please enter the message: ");
-    memset(buffer,0, 256);
-    // fgets(buffer,255,stdin);	//read message
-    
-    n = write(sockfd,"!c",2); //write to the socket
-    if (n < 0) {
-         error("ERROR writing to socket");
-    }
 
-    memset(buffer,0,256);
-    n = read(sockfd,buffer,2); //read from the socket
-    if (n < 0) 
-         error("ERROR reading from socket");
-    printf("%s\n",buffer);	//print server's response
-    
-
-    if(strncmp(buffer, "!s", 2) == 0){
-
-        do{
-            //the server starts sending data after the 2nd handshake step
-            memset(buffer,0,256);
-            nread = read(sockfd,buffer,255); //read from the socket
-            if (nread < 0) {
-                 error("ERROR reading from socket");
-            }
-            printf("%s\n",buffer);  //print server's response
-            
-            //send ack
-            nwrite = write(sockfd,"#c",2); //write to the socket
-            if (nwrite < 0) {
-                error("ERROR writing to socket");
-            }
-            printf("sending ACK\n");
-            //end of transmission
-            if(strncmp(buffer, "$s", 2) == 0){
-                break;
-            }
-        }
-        while(nread > 0);
-    }
-
+    /* Request file from the server */
+    memset(buf,0, BUFLEN);
+    bcopy(filename, buf, strlen(filename));
+    printf("Requesting file: %s\n", filename);
+	if (sendto(sockfd, buf, strlen(buf), 0, (struct sockaddr *)&serv_addr, servlen)<0) {
+		error("sendto");
+	}
+	//bool last = false;
+	//while(!last){
+		int pktcnt = 0;
+		bytesrecv = recvfrom(sockfd, buf, BUFLEN, 0, (struct sockaddr *)&serv_addr, &servlen);
+		if(bytesrecv > 0){
+			buf[bytesrecv] = 0;
+			printf("received message: %s", buf);
+			// send ACK
+			sprintf(buf, "ack %d", pktcnt++);
+			if (sendto(sockfd, buf, strlen(buf), 0, (struct sockaddr *)&serv_addr, servlen)==-1) {
+				error("sendto");
+			}
+		}
+	//}
     close(sockfd); //close socket
-    
     return 0;
 }
