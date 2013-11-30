@@ -754,7 +754,7 @@ int writeTCP(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, byte_t * 
 	*/
 
 	//write packets 
-	while(cwnd_numPendingAcks(cwndW) > 0)
+	while(cwnd_numPendingAcks(cwndW) > 0 || pkts[i] != 0)
 	{
 		if(pkts[i] != 0 && cwnd_checkAdd(cwndW))
 		{
