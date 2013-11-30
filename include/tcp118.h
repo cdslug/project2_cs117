@@ -55,6 +55,7 @@ void cwnd_free(cwnd_t *cwnd);
 uint32_t cwnd_nextMss(cwnd_t *cwnd);
 uint32_t cwnd_lastMss(cwnd_t *cwnd);
 uint32_t cwnd_numPendingAcks(cwnd_t *cwnd);
+void cwnd_setAck(cwnd_t *cwnd, uint32_t seqNum);
 bool cwnd_getAck(cwnd_t *cwnd, uint32_t seqNum);
 bool cwnd_checkIn(cwnd_t *cwnd, uint32_t seqNum);
 bool cwnd_checkAdd(cwnd_t *cwnd);
@@ -62,6 +63,8 @@ bool cwnd_addPkt(cwnd_t *cwnd, byte_t *buf);
 int cwnd_lastPktIndex(cwnd_t *cwnd);
 byte_t * cwnd_getLastPkt(cwnd_t *cwnd);
 void cwnd_markLastPktRead(cwnd_t *cwnd);
+
+void cwnd_print(cwnd_t *cwnd);
 
 uint16_t checksum(const uint8_t * addr, uint32_t count);
 

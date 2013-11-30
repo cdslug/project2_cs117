@@ -58,14 +58,27 @@ uint32_t cwnd_lastMss(cwnd_t *cwnd)
 
 uint32_t cwnd_numPendingAcks(cwnd_t *cwnd)
 {
-	uint32_t num = (cwnd_nextMss(cwnd)-cwnd_lastMss(cwnd)) % (cwnd->size/PACKET_SIZE + 1);
-	printf("cwnd_numPendingAcks: nextMss=%d, lastMss=%d\n",cwnd_lastMss(cwnd), cwnd_nextMss(cwnd));
+	uint32_t num = ((uint32_t)cwnd_nextMss(cwnd)-(uint32_t)cwnd_lastMss(cwnd)) % (cwnd->size/PACKET_SIZE);
+	printf("cwnd_numPendingAcks: nextMss=%d, lastMss=%d\n",cwnd_nextMss(cwnd), cwnd_lastMss(cwnd));
 	printf("cwnd_numPendingAcks: num=%d\n",num);
 	return num;
 }
+
+void cwnd_setAck(cwnd_t *cwnd, uint32_t seqNum)
+{
+	int i = seqNum/PACKET_SIZE;
+	if(cwnd_checkIn(cwnd, seqNum))
+	{
+		cwnd->acks[(seqNum%cwnd->size)/PACKET_SIZE] = 1;
+	}
+	else
+	{
+		printf("cwnd_setAck: seqNum out of frame");
+	}
+}
 bool cwnd_getAck(cwnd_t *cwnd, uint32_t seqNum)
 {
-	if(cwnd->acks[seqNum%cwnd->size] == 0)
+	if(cwnd->acks[(seqNum%cwnd->size)/PACKET_SIZE] == 0)
 	{
 		return false;
 	}
@@ -89,7 +102,7 @@ bool cwnd_checkIn(cwnd_t *cwnd, uint32_t seqNum)
 
 bool cwnd_checkAdd(cwnd_t *cwnd)
 {
-	if(cwnd->next_seq-cwnd->last_seq >= C_WND){
+	if((cwnd->next_seq - cwnd->last_seq) % cwnd->size >= C_WND){
 		return false;
 	}
 	else{
@@ -103,15 +116,18 @@ bool cwnd_addPkt(cwnd_t *cwnd, byte_t *buf)
 	printf("cwnd_addPkt: nextMss=%d\n", cwnd_nextMss(cwnd));
 	//then update variables
 	//if there are spots in the congestion window
-	if(cwnd->next_seq - cwnd->last_seq < C_WND)
+	if(cwnd_checkAdd(cwnd))
 	{
+		// printf("cwnd_addPkt: adding\n");
 		memcpy(cwnd->packets[cwnd_nextMss(cwnd)], buf, PACKET_SIZE);
+		cwnd->acks[cwnd->next_seq/PACKET_SIZE] = false;
 		cwnd->next_seq = (cwnd->next_seq+PACKET_SIZE) % cwnd->size;
-		printf("cwnd_addPkt: returning\n");
 		return true;
 	}
-	printf("cwnd_addPkt: window full!\n");
-	return false;
+	else{
+		printf("cwnd_addPkt: window full!\n");
+		return false;
+	}
 }
 
 int cwnd_lastPktIndex(cwnd_t *cwnd)
@@ -146,10 +162,29 @@ byte_t * cwnd_getLastPkt(cwnd_t *cwnd)
 void cwnd_markLastPktRead(cwnd_t *cwnd)
 {
 	int i = cwnd_lastPktIndex(cwnd);
+	printf("cwnd_markLastPktRead: index=%d\n",i);
 	if(i >= 0)
 	{
-		cwnd->acks[i] = true;
+		cwnd->acks[i] = 1;
+		cwnd->last_seq = (cwnd->last_seq+PACKET_SIZE)%cwnd->size;
 	}
+	printf("cwnd_markLastPktRead: state=%d\n", cwnd_getAck(cwnd,i*PACKET_SIZE));
+}
+
+void cwnd_print(cwnd_t *cwnd)
+{
+	int i = 0;
+	printf("cwnd_print: START\n");
+	printf("\tc_wnd=%d\n",cwnd->c_wnd);
+	printf("\tsize=%d\n",cwnd->size);
+	printf("\tlast_seq=%d\n",cwnd->last_seq);
+	printf("\tnext_seq=%d\n",cwnd->next_seq);
+	printf("\tack:\n");
+	for(i = 0; i < cwnd->size/PACKET_SIZE; i++)
+	{
+		printf("\t\t#%d=%d\n",i,cwnd_getAck(cwnd,(i*PACKET_SIZE)));
+	}
+	printf("cwnd_print: END\n");
 }
 
 uint16_t checksum(const uint8_t * addr, uint32_t count)
@@ -475,42 +510,38 @@ byte_t** bufToPackets(byte_t * buf, uint32_t nbytes)
 
 
 //takes care of timeout
+//returns number of packets remaining
 int writePacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndW, double p_corr)
 {
 	byte_t buf[PACKET_SIZE];
+	byte_t *pkt = NULL;
+	int i = 0;
+
 	memset(buf, 0, PACKET_SIZE);
 
-	// if packet is corrupt, it will send a packet of zeros
-	if(!p_check(p_corr)){
-		memcpy(buf, cwndW->packets[cwnd_lastMss(cwndW)], PACKET_SIZE);
-	}
-	if (sendto(sockfd, buf, PACKET_SIZE, 0, sockaddr, socklen)<0) {
-		error("sendto");
-	}
-		/*
-		//wait for ACK
-		do{
-			bytesrecv = recvfrom(sockfd, buf, PACKET_SIZE, 0, (struct sockaddr *)&sockaddr, &socklen);
-		}while(bytesrecv <= 0)//maybe it should be <=PACKET_SIZE
-		if(bytesrecv == PACKET_SIZE)
-		{
-			if( getLAST(buff)== true && 
-				getACK(buf) == true && 
-				getShake(buf) == true)
-			{
-				ret = 0;
-			}
-			else{
-				printf("writePacket: issues with ACK");
-				ret = -1;
-			}
+	
+
+	//iterate though all of the unacknowledged packets
+	for(i = cwnd_lastMss(cwndW); i < cwnd_numPendingAcks(cwndW); i++)
+	{
+		
+		if(p_check(p_corr)){
+			memset(buf, 0, PACKET_SIZE);
 		}
 		else{
-			//the entire packet was not received
-			printf("writePacket: entire packet not received\n");
-			ret = -1;
+			pkt = cwndW->packets[i];
+			if(pkt == NULL)
+			{
+				printf("writePacket: ERROR, packet is NULL");
+			}
+			memcpy(buf, pkt, PACKET_SIZE);
 		}
-		*/
+
+		if (sendto(sockfd, buf, PACKET_SIZE, 0, sockaddr, socklen)<0) {
+			error("sendto");
+		}
+	}
+	
 	printf("writePacket: packet sent!\n");
 	return 0;
 }
@@ -541,10 +572,11 @@ int readPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t 
 	cwnd_addPkt(cwndR, buf);
 
 	printPacket(buf);
-	printf("received message: %s\n", getBody(buf));
+	// printf("readPacket: received message=%s\n", getBody(buf));
 	return PACKET_SIZE;
 }
 
+//TODO: need to take into account acks that are behind
 bool readAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndW)
 {
 	byte_t buf[PACKET_SIZE];
@@ -574,18 +606,19 @@ bool readAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwn
 				}
 				ret = 0;
 				*/
+				cwnd_setAck(cwndW, getSeqNum(buf));
 				printf("readAckPacket: ack received! but cwnd not modified\n");
 				printPacket(buf);
 				ret = true;
 			}
 			else{
-				printf("writePacket: issues with ACK");
+				printf("readAckPacket: issues with ACK");
 				ret = false;
 			}
 		}
 		else{
 			//the entire packet was not received
-			printf("writePacket: entire packet not received\n");
+			printf("readAckPacket: entire packet not received\n");
 			ret = false;
 		}
 	//if the sequence number is one that has not been ack'ed
@@ -687,8 +720,38 @@ int writeTCP(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, byte_t * 
     cwndW = cwnd_init(cwndW);
     seed(); // seed random for packet loss and corruption
 
+/*
 	//break up buf into packets
 	pkts = bufToPackets(buf, nbytes);
+	cwnd_addPkt(cwndW, pkts[0]); //0
+	cwnd_markLastPktRead(cwndW);
+	cwnd_addPkt(cwndW, pkts[0]); //1
+	cwnd_markLastPktRead(cwndW);
+	cwnd_addPkt(cwndW, pkts[0]); //2
+	cwnd_markLastPktRead(cwndW);
+	cwnd_addPkt(cwndW, pkts[0]); //3
+	cwnd_markLastPktRead(cwndW);
+
+	// cwnd_print(cwndW);
+
+	cwnd_addPkt(cwndW, pkts[0]); //4
+	cwnd_markLastPktRead(cwndW);
+	cwnd_addPkt(cwndW, pkts[0]); //5
+	cwnd_markLastPktRead(cwndW);
+	cwnd_addPkt(cwndW, pkts[0]); //6
+	// cwnd_markLastPktRead(cwndW);
+	cwnd_addPkt(cwndW, pkts[0]); //7
+	// cwnd_markLastPktRead(cwndW);
+	cwnd_addPkt(cwndW, pkts[0]); //0
+	// cwnd_markLastPktRead(cwndW);
+	cwnd_addPkt(cwndW, pkts[0]); //1
+	// cwnd_markLastPktRead(cwndW);
+	cwnd_addPkt(cwndW, pkts[0]); //2
+	// cwnd_markLastPktRead(cwndW);
+
+	printf("writeTCP: ACKs left=%d\n", cwnd_numPendingAcks(cwndW));
+	cwnd_print(cwndW);
+	*/
 
 	//write packets 
 	while(cwnd_numPendingAcks(cwndW) > 0)
@@ -706,7 +769,6 @@ int writeTCP(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, byte_t * 
 	}
    	freePackets(pkts);
    	
-
     cwnd_free(cwndR);
 	cwnd_free(cwndW);
 	return nbytes;//change if there are bytes unwritten.
