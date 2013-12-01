@@ -7,23 +7,23 @@ LDIR =../lib
 
 LIBS=-lm
 
-_DEPS = tcp118.h parse.h response.h
+_DEPS = packet118.h cwnd118.h probability.h tcp118.h parse.h response.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_OBJ =  tcp118.o parse.o response.o server.o
+_OBJ =  packet118.o cwnd118.o probability.o tcp118.o parse.o response.o server.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 
 $(ODIR)/%.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-all: server client
+# all: server client
 
 server: $(OBJ)
 	gcc -o $@ $^ $(CFLAGS) $(LIBS)
 
-client: $(OBJ)
-	gcc -o $@ $^ $(CFLAGS) $(LIBS)
+# client: $(OBJ)
+# 	gcc -o $@ $^ $(CFLAGS) $(LIBS)
 
 .PHONY: clean
 

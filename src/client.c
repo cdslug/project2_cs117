@@ -29,6 +29,7 @@ int main(int argc, char *argv[])
     int portno, bytesrecv;
     double p_loss, p_corr;
     char * filename; // name of file to be requested
+    char * filebody;
     char * hostname; // host name of server
     char buf[BUFLEN];
     struct sockaddr_in serv_addr; // server address
@@ -59,13 +60,24 @@ int main(int argc, char *argv[])
     bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
     serv_addr.sin_port = htons(portno);
 
+
     /* Request file from the server */
+    
     memset(buf,0, BUFLEN);
     bcopy(filename, buf, strlen(filename));
     printf("Requesting file: %s\n", filename);
-	if (sendto(sockfd, buf, strlen(buf), 0, (struct sockaddr *)&serv_addr, servlen)<0) {
-		error("sendto");
-	}
+    writeTCP(sockfd, (struct sockaddr *)&serv_addr, servlen, filename, strlen(filename)+1, p_loss, p_corr);
+	
+
+    //reading from server
+    filebody = NULL;
+    readTCP(sockfd, (struct sockaddr *)&serv_addr, servlen, filebody, p_loss, p_corr); 
+    printf("client: start\nreadTCP=\n%s\nclient: end\n",filebody);
+    // if (sendto(sockfd, buf, strlen(buf), 0, (struct sockaddr *)&serv_addr, servlen)<0) {
+    // 	error("sendto");
+	// }
+
+    /*
 	//bool last = false;
 	//while(!last){
 		int pktcnt = 0;
@@ -80,6 +92,7 @@ int main(int argc, char *argv[])
 			}
 		}
 	//}
+    */
     close(sockfd); //close socket
     return 0;
 }
