@@ -10,9 +10,8 @@ int writePacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t
 	byte_t *pkt = NULL;
 	int i = 0;
 
+	// clear packet
 	memset(buf, 0, PACKET_SIZE);
-
-	
 
 	//iterate though all of the unacknowledged packets
 	for(i = cwnd_lastMss(cwndW); i < cwnd_numPendingAcks(cwndW); i++)
@@ -225,6 +224,7 @@ int acceptTCP(int sockfd, struct sockaddr_in sockaddr, socklen_t socklen)
 //        creates the contention window. 
 int writeTCP(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, byte_t * buf, size_t nbytes, double p_loss, double p_corr)
 {
+	clock_t start;
 	int i = 0;
 	byte_t **pkts = NULL;//for testing
 	// cwnd_t *cwndR;
@@ -248,6 +248,13 @@ int writeTCP(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, byte_t * 
 			i++;
 		}
 
+		// start_timer
+		if(cwnd_lastSeq(cwndW) == cwn_nextSeq(cwndW))
+			start = clock();
+
+		if((float)(clock()-start)/CLOCKS_PER_SEC > 0.160) // if the timer exceeds 160 ms, timeout
+			//timeout stuff goes here
+			
 		if(!p_check(p_loss))
 			writePacket(sockfd, sockaddr, socklen, cwndW, p_corr);
     	while(readAckPacket(sockfd, sockaddr, socklen, cwndW) == true);
