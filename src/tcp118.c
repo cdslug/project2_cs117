@@ -148,7 +148,10 @@ bool writeAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cw
 		return false;
 	}
 	printf("writeAckPacket: lastMss=%d\n",lastMss);
-	memcpy(buf, (byte_t *)cwnd_getPktSeq(cwndR, getSeqNum(buf)),PACKET_SIZE);
+	if(p_check(p_corr)) // corrupt packet
+		memset(buf, 0, PACKET_SIZE);
+	else
+		memcpy(buf, (byte_t *)cwnd_getPktSeq(cwndR, getSeqNum(buf)),PACKET_SIZE);
 	// printf("writeAckPacket: after memcpy\n");
 	generatePacket(pkt, getSeqNum(buf),getACKNum(buf),1,1,0,"",0);
 	if (sendto(sockfd, pkt, PACKET_SIZE, 0, sockaddr, socklen)<0) 
@@ -303,7 +306,8 @@ int readTCP(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, byte_t * m
 			printf("readTCP: currLen=%d\n", currLen);
 			printf("readTCP: currMsg=%s\n",getBody(pkt));
 			//ack will mark the last packet read
-			writeAckPacket(sockfd, sockaddr, socklen, cwndR, p_corr);
+			if(!p_check(p_loss))
+				writeAckPacket(sockfd, sockaddr, socklen, cwndR, p_corr);
 			msgBody = realloc(msgBody, msgLen + currLen);
 			memcpy(&(msgBody[msgLen]), getBody(pkt), currLen);
 			msgLen += currLen;
