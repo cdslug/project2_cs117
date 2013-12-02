@@ -289,7 +289,7 @@ int writeTCP(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, byte_t * 
 	while(cwnd_numPendingAcks(cwndW) > 0 || pkts[i] != 0)
 	{
 		// printPacket(pkts[i]);
-		if(pkts[i] != 0 && cwnd_checkAdd(cwndW))
+		while(pkts[i] != 0 && cwnd_checkAdd(cwndW))
 		{
 			cwnd_addPkt(cwndW, pkts[i]);
 			i++;
