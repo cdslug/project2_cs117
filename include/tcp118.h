@@ -19,7 +19,7 @@
 #include "probability.h"
 
 
-int writePacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndW, double p_corr);
+int writePackets(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndW, double p_corr);
 int readPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndR);
 
 
@@ -32,7 +32,7 @@ bool writeAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cw
 //int connectTCP(int sockFD, struct sockaddr *sockaddr, socklen_t socklen);
 
 int writeTCP(int sockFD, struct sockaddr *socaddr, socklen_t socklen, byte_t * buf, size_t nbytes, double p_loss, double p_corr);
-int readTCP(int sockFD, struct sockaddr *socaddr, socklen_t socklen, byte_t * msgBody, double p_loss, double p_corr);
+int readTCP(int sockFD, struct sockaddr *socaddr, socklen_t socklen, byte_t ** msgBody, double p_loss, double p_corr);
 
 
 

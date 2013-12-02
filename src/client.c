@@ -29,7 +29,8 @@ int main(int argc, char *argv[])
     int portno, bytesrecv;
     double p_loss, p_corr;
     char * filename; // name of file to be requested
-    char * filebody;
+    byte_t * filebodyPtr[1] = {NULL};
+    byte_t * filebody;
     char * hostname; // host name of server
     char buf[BUFLEN];
     struct sockaddr_in serv_addr; // server address
@@ -70,9 +71,15 @@ int main(int argc, char *argv[])
 	
 
     //reading from server
+    
     filebody = NULL;
-    readTCP(sockfd, (struct sockaddr *)&serv_addr, servlen, filebody, p_loss, p_corr); 
+    readTCP(sockfd, (struct sockaddr *)&serv_addr, servlen, filebodyPtr, p_loss, p_corr); 
+    filebody=*filebodyPtr;
     printf("client: start\nreadTCP=\n%s\nclient: end\n",filebody);
+    free(filebody);
+
+
+
     // if (sendto(sockfd, buf, strlen(buf), 0, (struct sockaddr *)&serv_addr, servlen)<0) {
     // 	error("sendto");
 	// }
