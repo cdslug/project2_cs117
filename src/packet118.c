@@ -37,7 +37,9 @@ uint32_t getSeqNum(const byte_t * pkt)
 
 void setSeqNum(byte_t * pkt, uint32_t seqNum)
 {
+	// printf("setSeqNum: input seqNum=%d\n",seqNum);
 	((uint32_t *)pkt)[SEQ_NUM_OFFSET>>5] = seqNum;
+	// printf("setSeqNum: output seqNum=%d\n",getSeqNum(pkt));
 	//SEGFAULT when trying to use pkt in here
 }
 
@@ -136,7 +138,7 @@ uint16_t getSize(const byte_t * pkt)
 int setSize(byte_t * pkt, uint16_t size)
 {
 		// int offset = ACK_OFFSET;
-	printf("setSize: start size=%d\n",size);
+	// printf("setSize: start size=%d\n",size);
 	uint32_t temp = size;
 	int ret = size;
 	if(size > MAX_BODY_SIZE){
@@ -145,9 +147,9 @@ int setSize(byte_t * pkt, uint16_t size)
 	}
 
 	temp = temp << 16;
-	printf("setSize: temp=%x\n",temp);
+	// printf("setSize: temp=%x\n",temp);
 	((uint32_t *)pkt)[SIZE_OFFSET>>5] = (((uint32_t *)pkt)[SIZE_OFFSET>>5]&0xFC00FFFF) | temp;
-	printf("setSize: size=%d\n",getSize(pkt));
+	// printf("setSize: size=%d\n",getSize(pkt));
 	// printf("setSize: size=%x\n",((uint32_t *)pkt)[SIZE_OFFSET>>5] );
 	return ret;
 }
@@ -292,13 +294,13 @@ byte_t** bufToPackets(byte_t * buf, uint32_t nbytes)
 
 
 	numPackets = (nbytes+(MAX_BODY_SIZE-1))/MAX_BODY_SIZE; //rounds up
-	printf("bufToPackets, number of packets=%d\n",numPackets);
+	// printf("bufToPackets, number of packets=%d\n",numPackets);
 	//allocate space
-	printf("bufToPackets, before packetarray malloc\n");
+	// printf("bufToPackets, before packetarray malloc\n");
 	packetArray = (byte_t**)malloc(sizeof(byte_t*) * (numPackets+1));
 	memset(packetArray, 0, sizeof(byte_t*)*(numPackets+1));
 	for(i = 0; i < numPackets; i++){
-		printf("bufToPackets, allocating string %d\n", i);
+		// printf("bufToPackets, allocating string %d\n", i);
 		packetArray[i] = (byte_t*)malloc(sizeof(byte_t) * (PACKET_SIZE));
 		memset(packetArray[i], '\0', sizeof(byte_t)*(PACKET_SIZE));
 	}
@@ -307,18 +309,21 @@ byte_t** bufToPackets(byte_t * buf, uint32_t nbytes)
 	for(i = 0; i < numPackets; i++){
 		int pieceLen = MAX_BODY_SIZE;
 		int seqNum = (i*PACKET_SIZE)%(2*C_WND);
-		printf("bufToPackets, copy to pkt#=%d, nbytes=%d, pieceLen=%d\n",i, nbytes, pieceLen);
+		printf("bufToPackets: seqNum=%d\n", seqNum);
 		//really this should not know the sequence number
 		if(nbytes < MAX_BODY_SIZE)
 		{
 			pieceLen = nbytes;
 			nbytes = 0;
 			generatePacket(packetArray[i], seqNum,seqNum,0,1,0,&(buf[i*MAX_BODY_SIZE]), pieceLen);
+			// printf("bufToPackets, copy to pkt#=%d, nbytes=%d, pieceLen=%d\n",i, nbytes, pieceLen);
 		}
 		else{
 			nbytes -= MAX_BODY_SIZE;
 			generatePacket(packetArray[i], seqNum,seqNum,0,0,0,&(buf[i*MAX_BODY_SIZE]), pieceLen);
-		}		
+			// printf("bufToPackets, copy to pkt#=%d, nbytes=%d, pieceLen=%d\n",i, nbytes, pieceLen);
+		}	
+		// printPacket(packetArray[i]);
 	}
 
 	return packetArray;

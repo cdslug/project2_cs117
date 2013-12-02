@@ -19,7 +19,7 @@
 #include <time.h>
 #include "tcp118.h"
 
-#define MAX_FILE_SIZE 1024
+#define MAX_FILE_SIZE 1000000
 #define BUFSIZE 1024
 
 
@@ -67,10 +67,12 @@ int main(int argc, char * argv[]){
 	while(1) {
 		int fbytesread;
 		char fileBuf[MAX_FILE_SIZE];
-		char * fileName;
+		byte_t * fileNamePtr[1] = {NULL};
+		byte_t *fileName = NULL;
 
 		printf("waiting on port %d\n", portno);
-		readTCP(sockfd, (struct sockaddr *)&cli_addr, clilen, fileName, p_loss, p_corr);
+		readTCP(sockfd, (struct sockaddr *)&cli_addr, clilen, fileNamePtr, p_loss, p_corr);
+		fileName = *fileNamePtr;
 		// receive file request
 		// bytesrecv = recvfrom(sockfd, buf, BUFSIZE, 0, (struct sockaddr *)&cli_addr, &clilen);
 		// if(bytesrecv > 0) {
@@ -86,26 +88,18 @@ int main(int argc, char * argv[]){
 		// fileName = strdup(buf);
 
 		//read file into file buffer
-		printf("Reading file...");
+		printf("server: Reading file...\n");
+		printf("server: fileName=%s\n",fileName);
 		fbytesread = readFile(fileName, fileBuf, MAX_FILE_SIZE);
 		if(fbytesread > 0) {
- 			printf("File Content: \n%s", fileBuf);
+ 			printf("File Content: \n%s\n", fileBuf);
+ 			writeTCP(sockfd, (struct sockaddr *)&cli_addr, clilen, fileBuf, fbytesread, p_loss, p_corr);
 		}
 		else
 			printf("Error reading file!\n");
+		free(fileName);
 		
-		writeTCP(sockfd, (struct sockaddr *)&cli_addr, clilen, fileBuf, fbytesread, p_loss, p_corr);
-		/*
-		while(filePackets being sent){
-			sendPacket(1...n)
-			receiveAck(1...n)
-			notreceiveAck(i)
-			resend(i)
-			if(sendto(sockfd, buf, strlen(buf), 0, (struct sockaddr *)& cli_addr, clilen) < 0) {
-				error("sendto");
-			}
-		}
-		*/
+		
 	}
 	// never exits
 
