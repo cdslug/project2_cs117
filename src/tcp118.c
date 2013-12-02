@@ -237,7 +237,6 @@ int writeTCP(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, byte_t * 
 
 	//break up buf into packets
 	pkts = bufToPackets(buf, nbytes);
-	
 
 	//write packets 
 	while(cwnd_numPendingAcks(cwndW) > 0 || pkts[i] != 0)
@@ -254,7 +253,7 @@ int writeTCP(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, byte_t * 
 
 		if((float)(clock()-start)/CLOCKS_PER_SEC > 0.160) // if the timer exceeds 160 ms, timeout
 			//timeout stuff goes here
-			
+
 		if(!p_check(p_loss))
 			writePacket(sockfd, sockaddr, socklen, cwndW, p_corr);
     	while(readAckPacket(sockfd, sockaddr, socklen, cwndW) == true);
@@ -365,4 +364,23 @@ int readFile(char * fileName, char * fileBuf, int BUFLEN){
 
         fclose(fp);
         return n;
+}
+
+int writeFile(char * fileName, char * fileBuf, int bytes){
+	char ch;
+	FILE *fp;
+	size_t n;
+
+	assert(fileBuf!=NULL);
+
+	fp = fopen(fileName, "w");
+	if(fp == NULL){
+		return -1; // return -1 for error state
+	}
+
+	n = fwrite(fileBuf, 1, bytes, fp);
+
+	fclose(fp);
+
+	return (int) n;
 }
