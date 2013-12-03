@@ -21,6 +21,7 @@
 
 #define MAX_FILE_SIZE 1000000
 #define BUFSIZE 1024
+#define TIMEOUT_MS 100
 
 
 void error(char *msg)
@@ -36,6 +37,7 @@ int main(int argc, char * argv[]){
     double p_loss, p_corr;
 	struct sockaddr_in serv_addr; // server address
 	struct sockaddr_in cli_addr; // client address
+	struct timeval tv;
 	socklen_t clilen = sizeof(cli_addr);
 
 	char buf[BUFSIZE]; // receive buffer
@@ -53,6 +55,12 @@ int main(int argc, char * argv[]){
 	if((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0){
 		error("ERROR, opening socket");
 	}
+
+	//Set timeout value for recvfrom
+	tv.tv_sec = 0;
+	tv.tv_usec = 1000*TIMEOUT_MS; // Set the timeout microsecond value using number of milliseconds
+	if(setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
+		error("ERROR: set timeout option\n");
 
 	/* bind UDP socket */
 	memset((char *) &serv_addr, 0, sizeof(serv_addr)); //clear memory for socket

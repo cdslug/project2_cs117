@@ -22,6 +22,7 @@ void error(char *msg)
 }
 
 #define BUFLEN 1024
+#define TIMEOUT_MS 100
 
 int main(int argc, char *argv[])
 {
@@ -34,6 +35,7 @@ int main(int argc, char *argv[])
     char * hostname; // host name of server
     char buf[BUFLEN];
     struct sockaddr_in serv_addr; // server address
+    struct timeval tv;
     socklen_t servlen = sizeof(serv_addr);
     struct hostent *server; //contains tons of information, including the server's IP address
 
@@ -61,9 +63,14 @@ int main(int argc, char *argv[])
     bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
     serv_addr.sin_port = htons(portno);
 
+    //Set timeout value for recvfrom
+    tv.tv_sec = 0;
+    tv.tv_usec = 1000*TIMEOUT_MS; // Set the timeout microsecond value using number of milliseconds
+    if(setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
+        error("ERROR: set timeout option\n");
+
 
     /* Request file from the server */
-    
     memset(buf,0, BUFLEN);
     bcopy(filename, buf, strlen(filename));
     printf("Requesting file: %s\n", filename);
