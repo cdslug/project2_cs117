@@ -102,7 +102,7 @@ int cwnd_numPendingAcks(cwnd_t *cwnd)
 	}
 	// uint32_t num = ((uint32_t)cwnd_nextMss(cwnd)-(uint32_t)cwnd_lastMss(cwnd)) % (cwnd->size/PACKET_SIZE);
 	// printf("cwnd_numPendingAcks: nextMss=%d, lastMss=%d\n",cwnd_nextMss(cwnd), cwnd_lastMss(cwnd));
-	printf("cwnd_numPendingAcks: num=%d\n",count);
+	// printf("cwnd_numPendingAcks: num=%d\n",count);
 	return count;
 }
 
@@ -120,7 +120,7 @@ int cwnd_numReceivedAcks(cwnd_t *cwnd)
 	}
 	// uint32_t num = ((uint32_t)cwnd_nextMss(cwnd)-(uint32_t)cwnd_lastMss(cwnd)) % (cwnd->size/PACKET_SIZE);
 	// printf("cwnd_numPendingAcks: nextMss=%d, lastMss=%d\n",cwnd_nextMss(cwnd), cwnd_lastMss(cwnd));
-	printf("cwnd_numReceivedAcks: num=%d\n",count);
+	// printf("cwnd_numReceivedAcks: num=%d\n",count);
 	return count;
 }
 
@@ -130,7 +130,7 @@ void cwnd_setAck(cwnd_t *cwnd, uint32_t seqNum)
 	if(cwnd_checkIn(cwnd, seqNum))
 	{
 		cwnd->acks[i] = 1;
-	}
+	}s
 	else
 	{
 		printf("cwnd_setAck: seqNum out of frame");

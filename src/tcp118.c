@@ -39,10 +39,11 @@ int writePackets(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_
 			memcpy(buf, pkt, PACKET_SIZE);
 		}
 		printf("writePacket: about to send, packet=\n");
-		printPacket(buf);
+		
 
 		if(!p_check(p_loss))
 		{
+			printPacket(buf);
 			if (sendto(sockfd, buf, PACKET_SIZE, 0, sockaddr, socklen)<0) {
 				error("sendto");
 			}
@@ -74,6 +75,7 @@ int readPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t 
 		printf("readPacket: exit, TIMEOUT!\n");
 		return -1;
 	}
+	printPacket(buf);
 	/*
 	//if it is in the range of being read
 	if(cwnd_addPkt(cwndR, getSeqNum(buf)) == true)
@@ -139,6 +141,7 @@ bool readAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwn
 			printf("readAckPacket: exit, TIMEOUT!\n");
 			return false;
 		}
+		printPacket(buf);
 		printf("readAckPacket: bytesrecv=%d, should=%d\n",bytesrecv, PACKET_SIZE);
 		// printPacket(buf);
 		printf("readAckPacket: getAck=%d, checksum=%d\n",getACK(buf),checksum(buf, PACKET_SIZE));
@@ -155,7 +158,7 @@ bool readAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwn
 					cwnd_setAllPrevAck(cwndW, getACKNum(buf));
 					cwnd_print(cwndW);
 					printf("readAckPacket: in order ack received!\n");
-					printPacket(buf);
+					// printPacket(buf);
 					ret = true;
 				}
 				else
@@ -276,6 +279,7 @@ bool readClosePacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen)
 			printf("readClosePacket: exit, TIMEOUT\n");
 			return false;
 		}
+		printPacket(buf);
 		// printf("readClosePacket: getClose=%d\n",getClose(buf));
 		// printPacket(buf);
 		// printf("readClosePacket: bytesrecv=%d, should=%d\n",bytesrecv, PACKET_SIZE);
