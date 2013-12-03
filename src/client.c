@@ -32,6 +32,7 @@ int main(int argc, char *argv[])
     char * filename; // name of file to be requested
     byte_t * filebodyPtr[1] = {NULL};
     byte_t * filebody;
+    int nbytes = 0;
     char * hostname; // host name of server
     char buf[BUFLEN];
     struct sockaddr_in serv_addr; // server address
@@ -80,33 +81,19 @@ int main(int argc, char *argv[])
     //reading from server
     
     filebody = NULL;
-    readTCP(sockfd, (struct sockaddr *)&serv_addr, servlen, filebodyPtr, p_loss, p_corr); 
+    nbytes = readTCP(sockfd, (struct sockaddr *)&serv_addr, servlen, filebodyPtr, p_loss, p_corr); 
     filebody=*filebodyPtr;
-    printf("client: start\nreadTCP=\n%s\nclient: end\n",filebody);
+    if(filebody != NULL)
+    {
+        char * rcv_filename = malloc(sizeof(char)*(strlen(filename)+4+1));
+        strcpy(rcv_filename, "rcv_");
+        strcpy(&(rcv_filename[4]), filename);
+        writeFile(rcv_filename, filebody, nbytes);
+        free(rcv_filename);
+    }
+    printf("client: start\n\tbytes read=%d\nreadTCP=\n%s\nclient: end\n",nbytes, filebody);
     free(filebody);
 
-
-
-    // if (sendto(sockfd, buf, strlen(buf), 0, (struct sockaddr *)&serv_addr, servlen)<0) {
-    // 	error("sendto");
-	// }
-
-    /*
-	//bool last = false;
-	//while(!last){
-		int pktcnt = 0;
-		bytesrecv = recvfrom(sockfd, buf, BUFLEN, 0, (struct sockaddr *)&serv_addr, &servlen);
-		if(bytesrecv > 0){
-			buf[bytesrecv] = 0;
-			printf("received message: %s\n", buf);
-			// send ACK
-			sprintf(buf, "ack %d", pktcnt++);
-			if (sendto(sockfd, buf, strlen(buf), 0, (struct sockaddr *)&serv_addr, servlen)==-1) {
-				error("sendto");
-			}
-		}
-	//}
-    */
     close(sockfd); //close socket
     return 0;
 }

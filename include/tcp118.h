@@ -19,14 +19,14 @@
 #include "probability.h"
 
 
-int writePackets(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndW, double p_corr);
+int writePackets(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndW, double p_loss, double p_corr);
 int readPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndR);
 
 
 //to be used after sending a packet
 bool readAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndW);
 //to be used after reading a packet
-bool writeAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndR, double p_corr);
+bool writeAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndR, double p_loss, double p_corr);
 
 //int acceptTCP(int sockFD, struct sockaddr *sockaddr, socklen_t socklen);
 //int connectTCP(int sockFD, struct sockaddr *sockaddr, socklen_t socklen);

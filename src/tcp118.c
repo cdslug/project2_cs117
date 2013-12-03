@@ -4,7 +4,7 @@
 
 //takes care of timeout
 //returns number of packets remaining
-int writePackets(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndW, double p_corr)
+int writePackets(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndW, double p_loss, double p_corr)
 {
 	byte_t buf[PACKET_SIZE];
 	byte_t *pkt = NULL;
@@ -27,6 +27,7 @@ int writePackets(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_
 		printf("writePacket: sending index=%d\n", i);
 		if(p_check(p_corr) && false){
 			memset(buf, 0, PACKET_SIZE);
+			printf("writePacket: CORRUPT! seq=%d\n",i*PACKET_SIZE);
 		}
 		else{
 			pkt = cwndW->packets[i];
@@ -39,8 +40,16 @@ int writePackets(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_
 		}
 		printf("writePacket: about to send, packet=\n");
 		printPacket(buf);
-		if (sendto(sockfd, buf, PACKET_SIZE, 0, sockaddr, socklen)<0) {
-			error("sendto");
+
+		if(!p_check(p_loss))
+		{
+			if (sendto(sockfd, buf, PACKET_SIZE, 0, sockaddr, socklen)<0) {
+				error("sendto");
+			}
+		}
+		else
+		{
+			printf("writePacket: LOST! seq=%d\n",i*PACKET_SIZE);
 		}
 	}
 	
@@ -157,7 +166,7 @@ bool readAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwn
 	return ret;
 }
 
-bool writeAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndR, double p_corr)
+bool writeAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndR, double p_loss, double p_corr)
 {
 	int ret = false;
 	byte_t buf[PACKET_SIZE],pkt[PACKET_SIZE];
@@ -189,18 +198,26 @@ bool writeAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cw
 		
 		// printf("writeAckPacket: after memcpy\n");
 		generatePacket(pkt, lastSeq,lastSeq,1,1,0,"",0);
-		if(p_check(p_corr) && false) // corrupt packet
+		if(p_check(p_corr)) // corrupt packet
 		{
 			memset(pkt, 0, PACKET_SIZE);
+			printf("writeAckPacket: CORRUPT! seq=%d",lastSeq);
 		}
 
 		printf("writeAckPacket: sending ack\n");
 		// printPacket(pkt);
-		if (sendto(sockfd, pkt, PACKET_SIZE, 0, sockaddr, socklen)<0) 
+		if(!p_check(p_loss))
 		{
-			error("sendto");
-			return false;
+			if (sendto(sockfd, pkt, PACKET_SIZE, 0, sockaddr, socklen)<0) 
+			{
+				error("sendto");
+				return false;
+			}
 		}
+		else
+		{
+			printf("writeAckPacket: LOST! seq=%d",lastSeq);
+		}	
 		cwnd_setAllPrevAck(cwndR, lastSeq);
 		ret = true;
 	}
@@ -314,8 +331,10 @@ int writeTCP(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, byte_t * 
 		//write packet goes through all unack'd packets
 		//choosing to skip it here will skip writing all packets
 		
-		// if(!p_check(p_loss))
-			writePackets(sockfd, sockaddr, socklen, cwndW, p_corr);
+
+		
+		writePackets(sockfd, sockaddr, socklen, cwndW, p_loss, p_corr);
+    	
     	while(readAckPacket(sockfd, sockaddr, socklen, cwndW) == true);
 		
 	}
@@ -394,10 +413,10 @@ printf("readTCP: enter\n");
 			//ack will mark the last packet read
 			//I don't know what to do if this ack is lost
 			//if there is one packet, readTCP will exit
-			//the sender will try to resent the packet
+			//the sender will try to resend the packet
 			//   but the server will no longer be looking for acks
-			if(!p_check(p_loss) && true)
-				writeAckPacket(sockfd, sockaddr, socklen, cwndR, p_corr);
+
+			writeAckPacket(sockfd, sockaddr, socklen, cwndR, p_loss, p_corr);
 			msgBody = realloc(msgBody, msgLen + currLen);
 			printf("readTCP: realloc msg=%s\n",msgBody);
 			memcpy(&(msgBody[msgLen]), getBody(pkt), currLen);
