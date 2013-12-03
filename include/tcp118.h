@@ -30,7 +30,7 @@ bool writeAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cw
 
 bool readClosePacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen);
 bool writeClosePacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, double p_loss, double p_corr);
-
+bool readClosePacketSender(int sockfd, struct sockaddr *sockaddr, socklen_t socklen);
 //int acceptTCP(int sockFD, struct sockaddr *sockaddr, socklen_t socklen);
 //int connectTCP(int sockFD, struct sockaddr *sockaddr, socklen_t socklen);
 

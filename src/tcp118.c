@@ -9,7 +9,7 @@ int writePackets(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_
 	byte_t buf[PACKET_SIZE];
 	byte_t *pkt = NULL;
 	int i = 0, iter = 0;;
-
+	printf("writePackets: enter\n");
 	// clear packet
 	memset(buf, 0, PACKET_SIZE);
 
@@ -64,14 +64,14 @@ int readPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t 
 	byte_t buf[PACKET_SIZE];
 	int bytesrecv = -1;
 	uint32_t expSeq = 0;
-
+	printf("readPacket: enter\n");
 	//would like to assume msgBody is a null pointer
 
 	bytesrecv = recvfrom(sockfd, buf, PACKET_SIZE, 0, sockaddr, &socklen);
 	
 	if(bytesrecv == -1){
 		// timeout on recvfrom
-		printf("readPacket: TIMEOUT!\n");
+		printf("readPacket: exit, TIMEOUT!\n");
 		return -1;
 	}
 	/*
@@ -87,6 +87,7 @@ int readPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t 
 	*/
 			if(getClose(buf) == 1)
 		{
+			printf("readPacket: exit, close packet received\n");
 			return 0;
 		}
 	expSeq = cwnd_lastPendingAckMss(cwndR)*PACKET_SIZE;
@@ -105,13 +106,14 @@ int readPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t 
 	else
 	{
 
-		printf("readPacket: checksum or order failed!\n");
-		printf("readPacket: checksum=%d, recSeq=%d,expSeq=%d\n", checksum(buf, PACKET_SIZE), getSeqNum(buf), expSeq);
+		// printf("readPacket: checksum or order failed!\n");
+		printf("readPacket: exit, checksum or order failed!,checksum=%d, recSeq=%d,expSeq=%d\n", checksum(buf, PACKET_SIZE), getSeqNum(buf), expSeq);
 		return 0;
 	}
-	printf("readPacket: printPacket=\n");
-	printPacket(buf);
+	// printf("readPacket: printPacket=\n");
+	// printPacket(buf);
 	// printf("readPacket: received message=%s\n", getBody(buf));
+	printf("readPacket: exit, all is good");
 	return PACKET_SIZE;
 }
 
@@ -134,7 +136,7 @@ bool readAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwn
 		bytesrecv = recvfrom(sockfd, buf, PACKET_SIZE, 0, sockaddr, &socklen);
 		if(bytesrecv == -1){
 			// timeout on recvfrom
-			printf("readAckPacket: TIMEOUT!\n");
+			printf("readAckPacket: exit, TIMEOUT!\n");
 			return false;
 		}
 		printf("readAckPacket: bytesrecv=%d, should=%d\n",bytesrecv, PACKET_SIZE);
@@ -184,6 +186,7 @@ bool readAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwn
 		}
 	//if the sequence number is one that has not been ack'ed
 	}
+	printf("readAckPacket: exit\n");
 	return ret;
 }
 
@@ -193,6 +196,7 @@ bool writeAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cw
 	byte_t buf[PACKET_SIZE],pkt[PACKET_SIZE];
 	uint32_t lastSeq = cwnd_lastPendingAckMss(cwndR) * PACKET_SIZE;
 
+printf("writeAckPacket: enter\n");
 	if(lastSeq == -1*PACKET_SIZE)
 	{
 		lastSeq = (cwnd_nextSeq(cwndR)-PACKET_SIZE)%cwndR->size;
@@ -245,13 +249,15 @@ bool writeAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cw
 			printf("writeAckPacket: LOST! seq=%d\n",lastSeq);
 		}	
 		cwnd_setAllPrevAck(cwndR, lastSeq);
+		printf("writeAckPacket:exit, true\n");
 		ret = true;
 	}
 	else
 	{
-		printf("writeAckPacket: no packets added yet\n");
+		printf("writeAckPacket: exit, no packets added yet\n");
 		ret = false;
 	}
+	printf("writeAckPacket: ret=%d\n",ret);
 	return ret;
 }
 
@@ -267,12 +273,12 @@ bool readClosePacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen)
 		bytesrecv = recvfrom(sockfd, buf, PACKET_SIZE, 0, sockaddr, &socklen);
 		if(bytesrecv == -1){
 			// timeout on recvfrom
-			printf("readClosePacket: TIMEOUT\n");
+			printf("readClosePacket: exit, TIMEOUT\n");
 			return false;
 		}
-		printf("readClosePacket: getClose=%d\n",getClose(buf));
-		printPacket(buf);
-		printf("readClosePacket: bytesrecv=%d, should=%d\n",bytesrecv, PACKET_SIZE);
+		// printf("readClosePacket: getClose=%d\n",getClose(buf));
+		// printPacket(buf);
+		// printf("readClosePacket: bytesrecv=%d, should=%d\n",bytesrecv, PACKET_SIZE);
 		// printPacket(buf);
 		printf("readClosePacket: getclose=%d, checksum=%d\n",getClose(buf),checksum(buf, PACKET_SIZE));
 		if(bytesrecv == PACKET_SIZE)
@@ -280,7 +286,7 @@ bool readClosePacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen)
 			if(getClose(buf) != 0 && checksum(buf, PACKET_SIZE) == 0)
 			{
 				
-			printf("readClosePacket: close received\n");
+			printf("readClosePacket: exit, close received\n");
 			ret = true;
 
 				
@@ -288,16 +294,16 @@ bool readClosePacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen)
 			else{
 				//if ack is corrupt, it will be unacknowledged. 
 				//what happens to the timer?
-				printf("readClosePacket: close packet issue, Close?=%d, checksum=%d\n",getClose(buf), checksum(buf,PACKET_SIZE));
+				printf("readClosePacket: exit, close packet issue, Close?=%d, checksum=%d\n",getClose(buf), checksum(buf,PACKET_SIZE));
 				ret = false;
 			}
 		}
 		else{
 			//the entire packet was not received
-			printf("readClosePacket: entire packet not received\n");
+			printf("readClosePacket: exit, entire packet not received\n");
 			ret = false;
 		}
-
+printf("readClosePacket: exit, ret=%d\n",ret);
 	return ret;
 }
 
@@ -306,6 +312,7 @@ bool writeClosePacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, 
 	int ret = false;
 	byte_t buf[PACKET_SIZE],pkt[PACKET_SIZE];
 	
+	printf("writeClosePacket: enter\n");
 
 	generatePacket(pkt, 0,0,0,1,1,"",0);
 
@@ -332,9 +339,72 @@ bool writeClosePacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, 
 		}	
 
 		ret = true;
-
+printf("writeClosePacket: ret=%d\n",ret);
 	return ret;
 }
+
+bool readClosePacketSender(int sockfd, struct sockaddr *sockaddr, socklen_t socklen)
+{
+	byte_t buf[PACKET_SIZE];
+	int i = 0;
+	int bytesrecv = 0;
+	bool ret = false;
+	printf("readClosePacketSender: enter\n");
+
+		printf("readClosePacketSender: about to read Close\n");
+		for(i = 0; i < 10; i++)
+		{
+			bytesrecv = recvfrom(sockfd, buf, PACKET_SIZE, 0, sockaddr, &socklen);
+		
+			if(bytesrecv > 0){
+				// timeout on recvfrom
+				printf("readClosePacketSender: packetread\n");
+				break;
+			}
+		}
+		if(i == 10)
+		{
+			//this will end the server read
+			printf("readClosePacketSender: exit, extended timeout, connection closed\n");
+			return true;
+		}
+		// printf("readClosePacketSender: getClose=%d\n",getClose(buf));
+		printPacket(buf);
+		// printf("readClosePacketSender: bytesrecv=%d, should=%d\n",bytesrecv, PACKET_SIZE);
+		// printPacket(buf);
+		printf("readClosePacketSender: getclose=%d, checksum=%d\n",getClose(buf),checksum(buf, PACKET_SIZE));
+		if(bytesrecv == PACKET_SIZE)
+		{
+			if(getClose(buf) != 0 && checksum(buf, PACKET_SIZE) == 0)
+			{
+				
+			printf("readClosePacketSender: exit, close received\n");
+			ret = false;
+
+				
+			}
+			else if (checksum(buf, PACKET_SIZE) == 0)
+			{
+				//if ack is corrupt, it will be unacknowledged. 
+				//what happens to the timer?
+				printf("readClosePacketSender: exit, non-close packet, Close?=%d, checksum=%d\n",getClose(buf), checksum(buf,PACKET_SIZE));
+				ret = true;
+			}
+			else
+			{
+				printf("readClosePacketSender: exit, checksum=%d\n",getClose(buf), checksum(buf,PACKET_SIZE));
+				ret = false;
+			}
+		}
+		else{
+			//the entire packet was not received
+			printf("readClosePacketSender: exit, entire packet not received\n");
+			ret = false;
+		}
+		printf("readClosePacketSender: exit, ret=%d\n",ret);
+	return ret;
+}
+
 /*
 int connectTCP(int sockfd, struct sockaddr_in sockaddr, socklen_t socklen)
 {
@@ -403,7 +473,7 @@ int writeTCP(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, byte_t * 
 	byte_t **pkts = NULL;//for testing
 	// cwnd_t *cwndR;
     cwnd_t *cwndW;
-
+printf("writeTCP: enter\n");
     // cwndR = cwnd_init(cwndR);
     cwndW = cwnd_init(cwndW, c_wnd);
     seed(); // seed random for packet loss and corruption
@@ -426,7 +496,7 @@ int writeTCP(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, byte_t * 
 		if(cwnd_numReceivedAcks(cwndW) == cwnd_maxMss(cwndW)/2 && 
 		   cwnd_checkAdd(cwndW) == false)
 		{
-			printf("readTCP: All acks received, shifting window\n");
+			printf("writeTCP: All acks received, shifting window\n");
 			cwnd_shiftWnd(cwndW);
 		}
 			
@@ -450,10 +520,11 @@ int writeTCP(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, byte_t * 
    	do{
 		printf("writePackets: attempting to close\n");
 		writeClosePacket(sockfd, sockaddr, socklen, p_loss, p_corr);
-	}while(readPacket(sockfd, sockaddr, socklen, cwndW) <= 0);
+	}while(readClosePacketSender(sockfd, sockaddr, socklen) == false);
 
     // cwnd_free(cwndR);
 	cwnd_free(cwndW);
+	printf("writePacket: exit");
 	return nbytes;//change if there are bytes unwritten.
 }
 
@@ -471,11 +542,11 @@ int readTCP(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, byte_t ** 
 	byte_t * msgBody =NULL;
 	cwnd_t *cwndR;
     // cwnd_t *cwndW;
-
+printf("readTCP: enter\n");
     cwndR = cwnd_init(cwndR, c_wnd);
     // cwndW = cwnd_init(cwndW);
 
-printf("readTCP: enter\n");
+
 	if(msgBody != NULL)
 	{
 		free(msgBody);
@@ -521,7 +592,9 @@ printf("readTCP: enter\n");
 		{
 			currLen = getSize(pkt);
 			printf("readTCP: currLen=%d, msgLen=%d\n", currLen, currLen + msgLen );
-			printf("readTCP: currMsg=%s\n",getBody(pkt));
+			// printf("readTCP: currMsg=%s\n",getBody(pkt));
+			printf("readTCP: currPkt=\n");
+			printPacket(pkt);
 			//ack will mark the last packet read
 			//I don't know what to do if this ack is lost
 			//if there is one packet, readTCP will exit
@@ -557,6 +630,7 @@ printf("readTCP: enter\n");
     cwnd_free(cwndR);
 
 	*msgBodyPtr = msgBody;
+	printf("readTCP, exit\n");
 	return msgLen;
 }
 

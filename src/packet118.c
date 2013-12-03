@@ -124,7 +124,7 @@ void setClose(byte_t * pkt, bool last)
 
 	((uint32_t *)pkt)[SHAKE_OFFSET>>5] = (((uint32_t *)pkt)[SHAKE_OFFSET>>5]&0xDFFFFFFF) | temp;
 
-	printf("setClose: close=%d\n",getClose(pkt));
+	// printf("setClose: close=%d\n",getClose(pkt));
 }
 
 uint16_t getSize(const byte_t * pkt)
