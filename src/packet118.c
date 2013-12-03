@@ -105,16 +105,17 @@ void setLast(byte_t * pkt, bool last)
 	// printf("setLast: last=%x\n",((uint32_t *)pkt)[LAST_OFFSET>>5] );
 }
 
-bool getShake(const byte_t * pkt)
+bool getClose(const byte_t * pkt)
 {
 	uint32_t temp = ((uint32_t *)pkt)[SHAKE_OFFSET>>5];
 	// printf("getLast: temp=%x\n",temp);
 	temp = temp >> 29;
 	temp = temp & 0x1;
-	return temp;
+	// printf("getClose: =%d\n",temp);
+	return (temp != 0);
 }
 
-void setShake(byte_t * pkt, bool last)
+void setClose(byte_t * pkt, bool last)
 {
 		// int offset = ACK_OFFSET;
 	uint32_t temp = last;
@@ -123,7 +124,7 @@ void setShake(byte_t * pkt, bool last)
 
 	((uint32_t *)pkt)[SHAKE_OFFSET>>5] = (((uint32_t *)pkt)[SHAKE_OFFSET>>5]&0xDFFFFFFF) | temp;
 
-	// printf("setLast: last=%x\n",((uint32_t *)pkt)[LAST_OFFSET>>5] );
+	printf("setClose: close=%d\n",getClose(pkt));
 }
 
 uint16_t getSize(const byte_t * pkt)
@@ -197,7 +198,7 @@ byte_t * generatePacket(byte_t * pkt,
 					   uint32_t ack_num, 
 					   bool ack, 
 					   bool last,
-					   bool shake,
+					   bool close,
 					   byte_t * buff,
 					   size_t count)
 {
@@ -216,6 +217,7 @@ byte_t * generatePacket(byte_t * pkt,
 	setACKNum(pkt, ack_num);
 	setACK(pkt, ack);
 	setLast(pkt, last);
+	setClose(pkt, close);
 	setSize(pkt, count);
 	setBody(pkt, buff, count);
 	cs = checksum(pkt, PACKET_SIZE);
@@ -249,6 +251,7 @@ void printPacket(byte_t * pkt)
 		printf("\tack_num=%x\n", getACKNum(pkt));
 		printf("\tack=%d\n", getACK(pkt));
 		printf("\tlast=%d\n",getLast(pkt));
+		printf("\tclose=%d\n",getClose(pkt));
 		printf("\tsize=%d\n",getSize(pkt));
 		printf("\tchecksum:\n");
 		printf("\t\tcs_msg=%x\n",cs_msg);
@@ -282,7 +285,7 @@ void freePackets(byte_t **pkts)
 
 //need to support binary files by using memcpy instead of strncpy
 
-byte_t** bufToPackets(byte_t * buf, uint32_t nbytes)
+byte_t** bufToPackets(byte_t * buf, uint32_t nbytes, uint32_t c_wnd)
 {
 	int numPackets = 0;
 	int i = 0;
@@ -308,7 +311,7 @@ byte_t** bufToPackets(byte_t * buf, uint32_t nbytes)
 	//divide up the file string
 	for(i = 0; i < numPackets; i++){
 		int pieceLen = MAX_BODY_SIZE;
-		int seqNum = (i*PACKET_SIZE)%(2*C_WND);
+		int seqNum = (i*PACKET_SIZE)%(2*c_wnd);
 		printf("bufToPackets: seqNum=%d\n", seqNum);
 		//really this should not know the sequence number
 		if(nbytes < MAX_BODY_SIZE)

@@ -75,13 +75,15 @@ int main(int argc, char *argv[])
     memset(buf,0, BUFLEN);
     bcopy(filename, buf, strlen(filename));
     printf("Requesting file: %s\n", filename);
-    writeTCP(sockfd, (struct sockaddr *)&serv_addr, servlen, filename, strlen(filename)+1, p_loss, p_corr);
+    writeTCP(sockfd, (struct sockaddr *)&serv_addr, servlen, filename, strlen(filename)+1,4096, p_loss, p_corr);
 	
-
-    //reading from server
+   //reading from server
     
     filebody = NULL;
-    nbytes = readTCP(sockfd, (struct sockaddr *)&serv_addr, servlen, filebodyPtr, p_loss, p_corr); 
+    nbytes = readTCP(sockfd, (struct sockaddr *)&serv_addr, servlen, filebodyPtr,4096, p_loss, p_corr); 
+    
+
+
     filebody=*filebodyPtr;
     if(filebody != NULL)
     {

@@ -79,21 +79,11 @@ int main(int argc, char * argv[]){
 		byte_t *fileName = NULL;
 
 		printf("waiting on port %d\n", portno);
-		readTCP(sockfd, (struct sockaddr *)&cli_addr, clilen, fileNamePtr, p_loss, p_corr);
+		readTCP(sockfd, (struct sockaddr *)&cli_addr, clilen, fileNamePtr,cWnd, p_loss, p_corr);
 		fileName = *fileNamePtr;
-		// receive file request
-		// bytesrecv = recvfrom(sockfd, buf, BUFSIZE, 0, (struct sockaddr *)&cli_addr, &clilen);
-		// if(bytesrecv > 0) {
-		// 	buf[bytesrecv] = 0;
-		// 	printf("received request for %s\n", buf);
-		// }
-		// else
-		// 	printf("Error receiving request!\n");
-
 		
+	
 
-		// fileName = strdup("test.txt");
-		// fileName = strdup(buf);
 
 		//read file into file buffer
 		printf("server: Reading file...\n");
@@ -101,7 +91,7 @@ int main(int argc, char * argv[]){
 		fbytesread = readFile(fileName, fileBuf, MAX_FILE_SIZE);
 		if(fbytesread > 0) {
  			printf("File Content: \n%s\n", fileBuf);
- 			writeTCP(sockfd, (struct sockaddr *)&cli_addr, clilen, fileBuf, fbytesread, p_loss, p_corr);
+ 			writeTCP(sockfd, (struct sockaddr *)&cli_addr, clilen, fileBuf, fbytesread,cWnd, p_loss, p_corr);
 		}
 		else
 			printf("Error reading file!\n");

@@ -1,23 +1,24 @@
 #include "cwnd118.h"
 
-cwnd_t* cwnd_init(cwnd_t *cwnd)
+cwnd_t* cwnd_init(cwnd_t *cwnd, uint32_t cwnd_size)
 {
 	int i = 0;
 
 	cwnd = malloc(sizeof(cwnd_t));
 
-	cwnd->c_wnd = C_WND;
-	cwnd->size = C_WND * 2;
+	cwnd->c_wnd = cwnd_size;
+	cwnd->size = cwnd_size * 2;
+	cwnd->start = 0;
 	cwnd->last_seq = 0;
 	cwnd->next_seq = 0;
-	cwnd->acks = malloc(sizeof(int)*(C_WND*2/PACKET_SIZE));
-	for(i = 0; i < (C_WND*2/PACKET_SIZE); i++)
+	cwnd->acks = malloc(sizeof(int)*(cwnd_size*2/PACKET_SIZE));
+	for(i = 0; i < (cwnd_size*2/PACKET_SIZE); i++)
 	{
 		cwnd->acks[i] = -1;
 	}
-	cwnd->packets = (byte_t **)malloc(sizeof(byte_t*)*(C_WND * 2/PACKET_SIZE));
+	cwnd->packets = (byte_t **)malloc(sizeof(byte_t*)*(cwnd_size * 2/PACKET_SIZE));
 
-	for(i = 0; i < (C_WND * 2)/PACKET_SIZE; i++)
+	for(i = 0; i < (cwnd_size * 2)/PACKET_SIZE; i++)
 	{
 		cwnd->packets[i] = malloc(sizeof(byte_t)*PACKET_SIZE);
 	}
@@ -30,6 +31,15 @@ cwnd_t* cwnd_init(cwnd_t *cwnd)
 	// printf("cwnd_init: end print\n");
 
 	return cwnd;
+}
+
+void cwnd_start(cwnd_t *cwnd)
+{
+	cwnd->start = 1;
+}
+bool cwnd_getStarted(cwnd_t *cwnd)
+{
+	return cwnd->start;
 }
 
 void cwnd_free(cwnd_t *cwnd)
@@ -211,7 +221,7 @@ bool cwnd_checkIn(cwnd_t *cwnd, uint32_t seqNum)
 
 bool cwnd_checkAdd(cwnd_t *cwnd)
 {
-	if((cwnd->next_seq - cwnd->last_seq) % cwnd->size >= C_WND){
+	if((cwnd->next_seq - cwnd->last_seq) % cwnd->size >= cwnd->c_wnd){
 		return false;
 	}
 	else{
@@ -242,6 +252,7 @@ bool cwnd_addPkt(cwnd_t *cwnd, byte_t *buf)
 			//start_timer
 		}
 		cwnd->next_seq = (cwnd->next_seq+PACKET_SIZE) % cwnd->size;
+		cwnd_start(cwnd);
 		return true;
 	}
 	else{

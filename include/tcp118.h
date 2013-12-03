@@ -28,11 +28,14 @@ bool readAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwn
 //to be used after reading a packet
 bool writeAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t *cwndR, double p_loss, double p_corr);
 
+bool readClosePacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen);
+bool writeClosePacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, double p_loss, double p_corr);
+
 //int acceptTCP(int sockFD, struct sockaddr *sockaddr, socklen_t socklen);
 //int connectTCP(int sockFD, struct sockaddr *sockaddr, socklen_t socklen);
 
-int writeTCP(int sockFD, struct sockaddr *socaddr, socklen_t socklen, byte_t * buf, size_t nbytes, double p_loss, double p_corr);
-int readTCP(int sockFD, struct sockaddr *socaddr, socklen_t socklen, byte_t ** msgBody, double p_loss, double p_corr);
+int writeTCP(int sockFD, struct sockaddr *socaddr, socklen_t socklen, byte_t * buf, size_t nbytes, uint32_t c_wnd, double p_loss, double p_corr);
+int readTCP(int sockFD, struct sockaddr *socaddr, socklen_t socklen, byte_t ** msgBody, uint32_t c_wnd, double p_loss, double p_corr);
 
 
 
