@@ -67,9 +67,12 @@ int readPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwnd_t 
 
 	//would like to assume msgBody is a null pointer
 
-	do{
-		bytesrecv = recvfrom(sockfd, buf, PACKET_SIZE, 0, sockaddr, &socklen);
-	}while(bytesrecv <= 0);
+	bytesrecv = recvfrom(sockfd, buf, PACKET_SIZE, 0, sockaddr, &socklen);
+	
+	if(bytesrecv == -1){
+		// timeout on recvfrom
+		return -1;
+	}
 	/*
 	//if it is in the range of being read
 	if(cwnd_addPkt(cwndR, getSeqNum(buf)) == true)
@@ -120,9 +123,12 @@ bool readAckPacket(int sockfd, struct sockaddr *sockaddr, socklen_t socklen, cwn
 	else
 	{
 		printf("readAckPacket: about to read Ack\n");
-		do{
-			bytesrecv = recvfrom(sockfd, buf, PACKET_SIZE, 0, sockaddr, &socklen);
-		}while(bytesrecv <= 0);
+
+		bytesrecv = recvfrom(sockfd, buf, PACKET_SIZE, 0, sockaddr, &socklen);
+		if(bytesrecv == -1){
+			// timeout on recvfrom
+			return -1;
+		}
 		printf("readAckPacket: bytesrecv=%d, should=%d\n",bytesrecv, PACKET_SIZE);
 		// printPacket(buf);
 		printf("readAckPacket: getAck=%d, checksum=%d\n",getACK(buf),checksum(buf, PACKET_SIZE));
